@@ -1,0 +1,45 @@
+MODEL : "FlatPlate"
+# MODEL : "EllipticalWing"      #when elliptical wing model is developed 
+
+
+#------------- DDPG already tunned -----------
+HIDDEN_LAYERS : [400, 300]  # Size of the NN
+MEMORY_CAPACITY : 1000000
+BATCH_SIZE : 64
+GAMMA : 0.99
+LEARNING_RATE_CRITIC : 0.001
+LEARNING_RATE_ACTOR : 0.001
+TAU : 0.005
+EXPLO_SIGMA : 0.01  # Exploration noise
+#--------------------------------------------
+
+
+
+# Set up of training details
+MAX_EPISODES : 300              #max number of episodes (full path)
+MAX_STEPS : 500                 #max number of steps per episode (steps per path)
+RANDOM_EPISODES : 20            #number of initial random episodes to get information for the AI
+
+POINTB_CHANGE : 1000            #number of episodes keeping same final point if
+                                #desired to change the final point of the path
+
+# Set up of testing details
+TEST_EPISODES : 20              #number of episodes for testing
+
+
+
+
+# Solver details (for the set of differential equations)
+DELTA_TIME : 0.0001             #time step
+# set from here initial and final conditions to reach
+XA : 0
+YA : 0
+UA : -1  # 3.1333
+VA : 0
+# set as final conditions a point located with at most 10degrees from the horizontal
+# axis with respect to the initial point
+XB : -0.05
+YB : 0.001
+
+FREQ_PLOT : 10
+
