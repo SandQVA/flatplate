@@ -22,7 +22,7 @@ import numpy as np
 
 from model import Model
 from utils import get_latest_dir
-from flatplat5 import FlatPlateModel
+from flatplate import FlatPlateModel
 
 parser = argparse.ArgumentParser(description='Test DDPG')
 parser.add_argument('--no_render', action='store_false', dest="render",
@@ -44,6 +44,8 @@ with open(os.path.join(args.folder, 'configuration.yaml'), 'r') as file:
 device = torch.device('cpu')
 
 
+if not os.path.exists(args.folder+'/test/'):
+    os.mkdir(args.folder+'/test/')
 
 
 # final position of the problem
@@ -134,12 +136,12 @@ except KeyboardInterrupt:
     pass
 finally:
     
-    np.savetxt('xplate.csv', xmatrix[:,0:n_ep], delimiter=";")
-    np.savetxt('yplate.csv', ymatrix[:,0:n_ep], delimiter=";")
-    np.savetxt('uplate.csv', umatrix[:,0:n_ep], delimiter=";")
-    np.savetxt('vplate.csv', vmatrix[:,0:n_ep], delimiter=";")
-    np.savetxt('actions.csv', actionsmatrix[:,0:n_ep], delimiter=";")
-    np.savetxt('rewards.csv', rewardsmatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/xplate.csv', xmatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/yplate.csv', ymatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/uplate.csv', umatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/vplate.csv', vmatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/actions.csv', actionsmatrix[:,0:n_ep], delimiter=";")
+    np.savetxt(str(args.folder)+'/test/rewards.csv', rewardsmatrix[:,0:n_ep], delimiter=";")
     
     
     if rewards:
