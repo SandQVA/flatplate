@@ -9,6 +9,7 @@ LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
 TAU : 0.005
 EXPLO_SIGMA : 0.01             # Exploration noise
+ACTION_SIGMA : 0.
 #---------------------------------------------
 
 

@@ -80,18 +80,18 @@ def train():
         xB = config["XB"]
         yB = config["YB"]
         
-        finalstate=[xB, yB]
+        finalstate=np.array([xB, yB])
         
         # initial conditions of the problem
         xA = config["XA"]
         yA = config["YA"]
         uA = config["UA"]
         vA = config["VA"]
-        initialconditions = [xA,yA,uA,vA]
+        initialconditions = np.array([xA,yA,uA,vA])
         
         LOW_BOUND = -15*np.pi/180
         HIGH_BOUND = 15*np.pi/180
-        STATE_SIZE = len(initialconditions)
+        STATE_SIZE = initialconditions.shape[0]
         ACTION_SIZE = 1
         
         low_bound_random = -12*np.pi/180
@@ -101,36 +101,6 @@ def train():
         
         env = FlatPlateModel(initialconditions,finalstate,config)
         
-        
-    #----------------------------------- Environment settigs ------------------------------
-    #still under development    
-    elif config["MODEL"] == "EllipticalWing":
-        #folder name
-        folder = f'runsEllipticalWing/{config["MODEL"].split("-")[0]}_{current_time}'
-        writer = SummaryWriter(folder)
-        if not os.path.exists(folder+'/models/'):
-            os.mkdir(folder+'/models/')
-        
-        # Write optional info about the experiment to tensorboard
-        for k, v in config.items():
-            writer.add_text('Configuration', str(k) + ' : ' + str(v), 0)
-        
-        with open(folder+'/configuration.yaml', 'w') as file:
-            yaml.dump(config, file)
-        
-        # Choose device cpu or cuda if a gpu is available
-        if not args.no_gpu and torch.cuda.is_available():
-            device = 'cuda'
-        else:
-            device = 'cpu'
-        print("\033[91m\033[1mDevice : ", device.upper(), "\033[0m")
-        writer.add_text('Device', device, 0)
-        device = torch.device(device)
-           
-        #-----------------------------------------------------------------
-
-
-
 
     
     print("Creating neural networks and optimizers...")
