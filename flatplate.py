@@ -17,12 +17,12 @@ class FlatPlateModel:
         
         self.xA = initialconditions[0]
         self.yA = initialconditions[1]
-        self.A = np.array[self.xA,self.yA]
+        self.A = np.array([self.xA,self.yA])
         self.uA = initialconditions[2]
         self.vA = initialconditions[3]
         self.xB = finalposition[0]
         self.yB = finalposition[1]
-        self.B = np.array[self.xB,self.yB]
+        self.B = np.array([self.xB,self.yB])
         self.rhoAB = np.linalg.norm(self.A-self.B)
         
         self.currentstate = np.array([self.xA,self.yA,self.uA,self.vA])
@@ -40,13 +40,15 @@ class FlatPlateModel:
         
 
     def get_state_in_relative_polar_coordinates(self,state):
-    	BP = state[0:2]-self.B
+        BP = state[0:2]-self.B
         BA = self.A-self.B
-    	rho = np.linalg.norm(BP)
-    	theta = np.acos (np.dot(BP,BA) / (rho * self.rhoAB))
+        rho = np.linalg.norm(BP)
+        theta = np.arccos (np.dot(BP,BA) / (rho * self.rhoAB))
+        u = state[2]
+        v = state[3]
         rhoDot = u * np.cos(theta) + v * np.sin(theta)
         thetaDot = - u * np.sin(theta) + v * np.cos(theta)
-    	return rho,theta,rhoDot,thetaDot
+        return rho, theta, rhoDot, thetaDot
 
     # differential equations system for flat plate
     def flatplate(self,variables,t):
@@ -77,9 +79,9 @@ class FlatPlateModel:
     def step(self,action):
         #alpha is the action
         self.alpha = action
-        old_polar_state = get_state_in_relative_polar_coordinates(self.currentstate)
+        old_polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
         #if some noise is wanted to be added to 'model' turbulence effects
-        self.alpha = action + np.random.normal(scale=config["ACTION_SIGMA"])
+        self.alpha = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
         
         #time vector with initial and final point of the step
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
@@ -87,7 +89,7 @@ class FlatPlateModel:
         odestates = odeint(self.flatplate,self.currentstate,timearray)
         #as odeint will return two different states, choose the second one
         self.currentstate = odestates[-1]
-        new_polar_state = get_state_in_relative_polar_coordinates(self.currentstate)
+        new_polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
         
         #compute reward and done
         reward = self.compute_reward(old_polar_state, action, new_polar_state)
@@ -124,16 +126,17 @@ class FlatPlateModel:
         done = False
         #done if the final point is almost reached
         #or if abs(theta) >= pi/2
-        polar_state = get_state_in_relative_polar_coordinates(self.currentstate)
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]) >= np.pi/2.
+        polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]) >= np.pi/2.:
             done = True
         return done
     
     #reset the model with initial conditions
     def reset(self, state=None):
-    	if state=None:
-	        self.currentstate = np.array([self.xA, self.yA, self.uA, self.vA])
-	    else:
-	    	self.currentstate = state
-        return get_state_in_relative_polar_coordinates(self.currentstate)
-        
+        if state==None:
+            print('state none')
+            self.currentstate = np.array([self.xA, self.yA, self.uA, self.vA])
+        else:
+            print('state else')
+            self.currentstate = state
+        return self.get_state_in_relative_polar_coordinates(self.currentstate)
