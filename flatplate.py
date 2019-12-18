@@ -26,9 +26,9 @@ class FlatPlateModel:
         self.rhoAB = np.linalg.norm(self.A-self.B)
 
         self.BA = self.A-self.B
-        print('self.BA', self.BA)
+        #print('self.BA', self.BA)
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
-        print('self.phiA', self.phiA)
+        #print('self.phiA', self.phiA)
 
         #self.cartesian_state = np.array([self.xA,self.yA,self.uA,self.vA])
         #self.polar_state = self.get_state_in_relative_polar_coordinates()
