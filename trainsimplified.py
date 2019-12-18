@@ -4,10 +4,6 @@ Created on Tue Jun 11 16:21:33 2019
 
 @author: andrea
 """
-
-
-#import inspect
-# #inspect.getmembers(object)
 import os
 import time
 from datetime import datetime
@@ -19,18 +15,13 @@ except ModuleNotFoundError:
 
 import numpy as np
 import matplotlib.pyplot as plt
-#import gym
 import yaml
-
 
 import torch
 from tensorboardX import SummaryWriter
 
-
 from model import Model
 from flatplate import FlatPlateModel
-
-
 
 
 def train():
@@ -156,10 +147,11 @@ def train():
             #NOT NEEDED FOR THE EVALUATION, BUT HELPFUL FOR RESULTS INTERPRETATION
             #colletion of matrices with the information each episode step by step
             if config["MODEL"] == "FlatPlate":
-                xmatrix[rowstep][columnepisode] = state[0]
-                ymatrix[rowstep][columnepisode] = state[1]
-                umatrix[rowstep][columnepisode] = state[2]
-                vmatrix[rowstep][columnepisode] = state[3]
+                cartesian_state = env.get_state_in_absolute_cartesian_coordinates(state)
+                xmatrix[rowstep][columnepisode] = cartesian_state[0]
+                ymatrix[rowstep][columnepisode] = cartesian_state[1]
+                umatrix[rowstep][columnepisode] = cartesian_state[2]
+                vmatrix[rowstep][columnepisode] = cartesian_state[3]
             
             #if changing the final point is desired to generate completely independent
             #to final position models
@@ -200,7 +192,7 @@ def train():
                 action = np.clip(action+noise, LOW_BOUND, HIGH_BOUND)
                 
                 # Perform an action 
-                next_state, reward, done = env.step(action)
+                next_state, reward, done = env.step(action, state)
                 
                 #check if there has been divergence in the solution
                 if reward == 0 and np.array_equal(next_state,initialconditions):
@@ -227,10 +219,11 @@ def train():
                 #colletion of matrices with the information each episode step by step
                 if config["MODEL"] == "FlatPlate":
                     #update the matrices to later export them
-                    xmatrix[rowstep][columnepisode] = next_state[0]
-                    ymatrix[rowstep][columnepisode] = next_state[1]
-                    umatrix[rowstep][columnepisode] = next_state[2]
-                    vmatrix[rowstep][columnepisode] = next_state[3]
+                    cartesian_state = env.get_state_in_absolute_cartesian_coordinates(next_state)        
+                    xmatrix[rowstep][columnepisode] = cartesian_state[0]
+                    ymatrix[rowstep][columnepisode] = cartesian_state[1]
+                    umatrix[rowstep][columnepisode] = cartesian_state[2]
+                    vmatrix[rowstep][columnepisode] = cartesian_state[3]
                     actionsmatrix[rowstep][columnepisode] = action[0]*180/np.pi
                     rewardsmatrix[rowstep][columnepisode] = reward
                 
@@ -328,11 +321,5 @@ def train():
           'Average duration of one episode : ', round(time_execution/nb_episodes, 3), 's\n'
           '---------------------------------------------------')
 
-
-
-
 #main of the code
 train()
-
-
-

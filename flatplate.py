@@ -24,8 +24,14 @@ class FlatPlateModel:
         self.yB = finalposition[1]
         self.B = np.array([self.xB,self.yB])
         self.rhoAB = np.linalg.norm(self.A-self.B)
-        
-        self.currentstate = np.array([self.xA,self.yA,self.uA,self.vA])
+
+        self.BA = self.A-self.B
+        print('self.BA', self.BA)
+        self.phiA = np.arctan2(self.BA[1],self.BA[0])
+        print('self.phiA', self.phiA)
+
+        #self.cartesian_state = np.array([self.xA,self.yA,self.uA,self.vA])
+        #self.polar_state = self.get_state_in_relative_polar_coordinates()
         
         self.Drag = 0                                   #not considering drag forces
         self.c = 0.1                                    #flat plate chord
@@ -39,24 +45,53 @@ class FlatPlateModel:
         self.g = -9.806                                 #gravity taking into account the reference system
         
 
-    def get_state_in_relative_polar_coordinates(self,state):
-        BP = state[0:2]-self.B
-        BA = self.A-self.B
+    def get_state_in_relative_polar_coordinates(self, cartesian_state):
+        BP = cartesian_state[0:2]-self.B
         rho = np.linalg.norm(BP)
-        theta = np.arccos (np.dot(BP,BA) / (rho * self.rhoAB))
-        u = state[2]
-        v = state[3]
-        rhoDot = u * np.cos(theta) + v * np.sin(theta)
-        thetaDot = - u * np.sin(theta) + v * np.cos(theta)
-        return rho, theta, rhoDot, thetaDot
+        phiP = np.arctan2(BP[1],BP[0])
+        theta = phiP - self.phiA
+
+        #print('phiA', self.phiA)
+        #print('phiP', phiP)
+        #print('theta', theta)
+
+        u = cartesian_state[2]
+        v = cartesian_state[3]
+
+        rhoDot = u * np.cos(phiP) + v * np.sin(phiP)
+        thetaDot = - u * np.sin(phiP) + v * np.cos(phiP)
+        polar_state = np.array([rho, theta, rhoDot, thetaDot])
+
+        return polar_state
+
+
+    def get_state_in_absolute_cartesian_coordinates(self, polar_state):
+        rho = polar_state[0]
+        theta = polar_state[1]
+        rhoDot = polar_state[2]
+        thetaDot = polar_state[3]
+        phiP = theta + self.phiA
+
+        #print('phiA', self.phiA)
+        #print('phiP', phiP)
+        #print('theta', theta)
+
+        x = self.xB + rho * np.cos(phiP)
+        y = self.yB + rho * np.sin(phiP)
+
+        u = rhoDot * np.cos(phiP) - thetaDot * np.sin(phiP)
+        v = rhoDot * np.sin(phiP) + thetaDot * np.cos(phiP)
+        cartesian_state = np.array([x, y, u, v])
+
+        return cartesian_state
+
 
     # differential equations system for flat plate
-    def flatplate(self,variables,t):
-        #no time dependance on time for ODE
-        x = variables[0]
-        y = variables[1]
-        u = variables[2]
-        v = variables[3]
+    def flatplate(self,polar_state,t):
+    #def flatplate(self):
+        cartesian_state = self.get_state_in_absolute_cartesian_coordinates(polar_state)
+        u = cartesian_state[2]
+        v = cartesian_state[3]
         
         V = np.sqrt(u**2+v**2)
         alphainduced = np.arctan2(v,u)
@@ -72,71 +107,64 @@ class FlatPlateModel:
         dudt = self.Drag/self.m 
         dvdt = self.g + self.mr * V**2 * (self.alpha + alphainduced) 
         
-        computedstate = [dxdt, dydt, dudt, dvdt]
+        computedstate = np.array([dxdt, dydt, dudt, dvdt])
         return computedstate
+
     
     #compute next state, reward and done or not
-    def step(self,action):
+    def step(self,action, polar_state):
         #alpha is the action
         self.alpha = action
-        old_polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
+        old_polar_state = polar_state
         #if some noise is wanted to be added to 'model' turbulence effects
         self.alpha = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
         
         #time vector with initial and final point of the step
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
+        old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
         #y = odeint(model, y0, t)
-        odestates = odeint(self.flatplate,self.currentstate,timearray)
+        odestates = odeint(self.flatplate,old_cartesian_state,timearray)
         #as odeint will return two different states, choose the second one
-        self.currentstate = odestates[-1]
-        new_polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
+        new_cartesian_state = odestates[-1]
+        new_polar_state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
         
         #compute reward and done
         reward = self.compute_reward(old_polar_state, action, new_polar_state)
-        done = self.isdone()
+        done = self.isdone(new_polar_state)
         
         # must return new state, reward, done (boolean)
-        # print(newstate)
         return [new_polar_state, reward, done]
+
 
     #compute reward
     def compute_reward(self, old_polar_state, action, new_polar_state):
-        #------------- Still working on tuning a good reward function ------------
-        
-#        k1 = 100
-#        k2 = 5*180/np.pi
-#        reward = 1-k1*(self.rho/self.rhoAB * (1+k2*abs(self.theta)))
-#        reward = 1-k1*(self.rho/self.rhoAB + k1*k2*abs(self.theta))
-#        reward = 1-k1*(self.rho/self.rhoAB+k1*k2*self.theta+2*(1-self.rho/self.rhoAB)*k2*self.theta)
-#        k1 = 100
-#        k2 = 5*180/np.pi
-#        k3 = 180/np.pi
-#        reward = 1-k1*(rho/self.rhoAB + k1*k2*abs(theta) + k3*(1-rho/self.rhoAB)*abs(theta))
-
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
         reward = -delta_rho # go to goal
         #reward = -delta_rho - delta_abs_theta # go to goal along the AB line
 
         return reward
-    
+
     
     #check if done
-    def isdone(self):
+    def isdone(self, polar_state):
         done = False
         #done if the final point is almost reached
         #or if abs(theta) >= pi/2
-        polar_state = self.get_state_in_relative_polar_coordinates(self.currentstate)
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]) >= np.pi/2.:
+        print('theta', polar_state[1])
+        print('np.abs(polar_state[1]+self.phiA)', np.abs(polar_state[1]+self.phiA))
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
             done = True
         return done
+
     
     #reset the model with initial conditions
     def reset(self, state=None):
         if state==None:
             print('state none')
-            self.currentstate = np.array([self.xA, self.yA, self.uA, self.vA])
+            cartesian_state = np.array([self.xA,self.yA,self.uA,self.vA])
+            polar_state = self.get_state_in_relative_polar_coordinates(cartesian_state)
         else:
             print('state else')
-            self.currentstate = state
-        return self.get_state_in_relative_polar_coordinates(self.currentstate)
+            polar_state = state
+        return polar_state
