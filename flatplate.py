@@ -151,8 +151,8 @@ class FlatPlateModel:
         done = False
         #done if the final point is almost reached
         #or if abs(theta) >= pi/2
-        print('theta', polar_state[1])
-        print('np.abs(polar_state[1]+self.phiA)', np.abs(polar_state[1]+self.phiA))
+        #print('theta', polar_state[1])
+        #print('np.abs(polar_state[1]+self.phiA)', np.abs(polar_state[1]+self.phiA))
         if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
             done = True
         return done
