@@ -122,6 +122,7 @@ class FlatPlateModel:
         #time vector with initial and final point of the step
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
+        print(old_cartesian_state)
         #y = odeint(model, y0, t)
         odestates = odeint(self.flatplate,old_cartesian_state,timearray)
         #as odeint will return two different states, choose the second one
@@ -140,7 +141,7 @@ class FlatPlateModel:
     def compute_reward(self, old_polar_state, action, new_polar_state):
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
-        reward = -delta_rho # go to goal
+        reward = -10000*delta_rho # go to goal
         #reward = -delta_rho - delta_abs_theta # go to goal along the AB line
 
         return reward
