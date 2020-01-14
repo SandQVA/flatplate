@@ -135,7 +135,7 @@ def train():
         
         #evaluation of episodes
         for episode in trange(config["MAX_EPISODES"]):
-            print('episode', columnepisode)
+            #print('episode', columnepisode)
             
             rowstep = 0                             #parameter to classify the information 
                                                     #of each episode in matrix form
@@ -174,7 +174,7 @@ def train():
             print('Episode number',nb_episodes,'keep waiting...')
             #check that not finished the episode
             while not done and step < config["MAX_STEPS"]:
-                print('step', rowstep)
+                #print('step', rowstep)
                 
                 rowstep += 1                        #parameter to classify the information 
                                                     #of each episode in matrix form
