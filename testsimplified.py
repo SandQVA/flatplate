@@ -46,20 +46,27 @@ if not os.path.exists(args.folder+'/test/'):
     os.mkdir(args.folder+'/test/')
 
 
+## --------------------------------- Environment settigs ------------------------------
+
 # final position of the problem
 xB = config["XB"]
 yB = config["YB"]
 
-finalstate=[xB, yB]
+finalstate=np.array([xB, yB])
 
 # initial conditions of the problem
 xA = config["XA"]
 yA = config["YA"]
 uA = config["UA"]
 vA = config["VA"]
-initialconditions = [xA,yA,uA,vA]
-STATE_SIZE = len(initialconditions)
+initialconditions = np.array([xA,yA,uA,vA])
+
+LOW_BOUND = -15*np.pi/180
+HIGH_BOUND = 15*np.pi/180
+STATE_SIZE = initialconditions.shape[0]
 ACTION_SIZE = 1
+
+## --------------------------------------------------------
 
 # Create gym environment
 env = FlatPlateModel(initialconditions,finalstate,config)
@@ -100,15 +107,16 @@ try:
         state = env.reset()
         reward = 0
         done = False
-        steps = 0
-        while not done and steps < config["MAX_STEPS"]:
+        step = 0
+        while not done and step < config["MAX_STEPS"]:
             
             rowstep += 1
             
             action = model.select_action(state)
+            action = np.clip(action, LOW_BOUND, HIGH_BOUND)
             state, r, done = env.step(action, state)
             reward += r
-            steps += 1
+            step += 1
 
             cartesian_state = env.get_state_in_absolute_cartesian_coordinates(state) 
             xmatrix[rowstep][columnepisode] = cartesian_state[0]
