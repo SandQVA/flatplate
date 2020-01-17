@@ -1,8 +1,8 @@
 MODEL : "FlatPlate"
 
 #------- DDPG already tunned -----------------
-HIDDEN_LAYERS : [400, 300]     # Size of the NN
-MEMORY_CAPACITY : 1000000
+HIDDEN_LAYERS : [8, 8]     # Size of the NN
+MEMORY_CAPACITY : 50000
 BATCH_SIZE : 64
 GAMMA : 0.99
 LEARNING_RATE_CRITIC : 0.001
@@ -14,7 +14,7 @@ ACTION_SIGMA : 0.
 
 
 #------- Set up of training details ----------
-MAX_EPISODES : 100              # max number of episodes (full path)
+MAX_EPISODES : 500              # max number of episodes (full path)
 MAX_STEPS : 350                # max number of steps per episode (steps per path)
 RANDOM_EPISODES : 1           # number of initial random episodes to get information for the AI
 POINTB_CHANGE : 2000           # number of episodes keeping same final point if
