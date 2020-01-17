@@ -174,7 +174,6 @@ def train():
             print('Episode number',nb_episodes,'keep waiting...')
             #check that not finished the episode
             while not done and step < config["MAX_STEPS"]:
-                #print('step', rowstep)
                 
                 rowstep += 1                        #parameter to classify the information 
                                                     #of each episode in matrix form
@@ -269,6 +268,7 @@ def train():
         model.save()
         print("\033[91m\033[1mModel saved in", folder, "\033[0m")
         
+        plt.show()
         #------------------- NOT NEEDED FOR THE CODE ITSELF ----------------------
         #save to external files the information about the states to evaluate in a
         #proper way what is happening at a time and episode

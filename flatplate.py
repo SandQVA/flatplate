@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jun 12 17:17:59 2019 by Andrea
-Last modified dec 17 2019 by Sandrine
-
+Last modified jan 17 2020 by Sandrine
 """
 
 import numpy as np
@@ -26,13 +25,8 @@ class FlatPlateModel:
         self.rhoAB = np.linalg.norm(self.A-self.B)
 
         self.BA = self.A-self.B
-        #print('self.BA', self.BA)
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
-        #print('self.phiA', self.phiA)
 
-        #self.cartesian_state = np.array([self.xA,self.yA,self.uA,self.vA])
-        #self.polar_state = self.get_state_in_relative_polar_coordinates()
-        
         self.Drag = 0                                   #not considering drag forces
         self.c = 0.1                                    #flat plate chord
         self.L = 1                                      #flat plate length
@@ -51,10 +45,6 @@ class FlatPlateModel:
         phiP = np.arctan2(BP[1],BP[0])
         theta = phiP - self.phiA
 
-        #print('phiA', self.phiA)
-        #print('phiP', phiP)
-        #print('theta', theta)
-
         u = cartesian_state[2]
         v = cartesian_state[3]
 
@@ -72,10 +62,6 @@ class FlatPlateModel:
         thetaDot = polar_state[3]
         phiP = theta + self.phiA
 
-        #print('phiA', self.phiA)
-        #print('phiP', phiP)
-        #print('theta', theta)
-
         x = self.xB + rho * np.cos(phiP)
         y = self.yB + rho * np.sin(phiP)
 
@@ -88,19 +74,18 @@ class FlatPlateModel:
 
     # differential equations system for flat plate
     def flatplate(self,polar_state,t):
-    #def flatplate(self):
         cartesian_state = self.get_state_in_absolute_cartesian_coordinates(polar_state)
         u = cartesian_state[2]
         v = cartesian_state[3]
         
         V = np.sqrt(u**2+v**2)
         alphainduced = np.arctan2(v,u)
+        # TO DO check
         if alphainduced <= np.pi and alphainduced >= 0:
             alphainduced = -(np.pi - np.abs(alphainduced))
         else:
             alphainduced = np.pi - np.abs(alphainduced)
         
-        #set of differential equations
         dxdt = u
         dydt = v
         
@@ -122,44 +107,36 @@ class FlatPlateModel:
         #time vector with initial and final point of the step
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        #print(old_cartesian_state)
         #y = odeint(model, y0, t)
         odestates = odeint(self.flatplate,old_cartesian_state,timearray)
         #as odeint will return two different states, choose the second one
         new_cartesian_state = odestates[-1]
         new_polar_state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
         
-        #compute reward and done
         reward = self.compute_reward(old_polar_state, action, new_polar_state)
         done = self.isdone(new_polar_state)
         
-        # must return new state, reward, done (boolean)
         return [new_polar_state, reward, done]
 
 
-    #compute reward
     def compute_reward(self, old_polar_state, action, new_polar_state):
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
-        reward = -10000*delta_rho # go to goal
+        #reward = -10000*delta_rho # go to goal
+        reward = -10000*delta_rho -1 # go to goal through the shortest path
         #reward = -delta_rho - delta_abs_theta # go to goal along the AB line
 
         return reward
 
     
-    #check if done
     def isdone(self, polar_state):
         done = False
-        #done if the final point is almost reached
-        #or if abs(theta) >= pi/2
-        #print('theta', polar_state[1])
-        #print('np.abs(polar_state[1]+self.phiA)', np.abs(polar_state[1]+self.phiA))
+        #done if the final point is almost reached or if abs(theta) >= pi/2
         if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
             done = True
         return done
 
     
-    #reset the model with initial conditions
     def reset(self, state=None):
         if state==None:
             print('state none')
