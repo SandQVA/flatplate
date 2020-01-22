@@ -114,7 +114,7 @@ try:
             
             action = model.select_action(state)
             action = np.clip(action, LOW_BOUND, HIGH_BOUND)
-            state, r, done = env.step(action, state)
+            state, r, done = env.step(action)
             reward += r
             step += 1
 

@@ -153,7 +153,7 @@ def train():
                 ymatrix[rowstep][columnepisode] = cartesian_state[1]
                 umatrix[rowstep][columnepisode] = cartesian_state[2]
                 vmatrix[rowstep][columnepisode] = cartesian_state[3]
-            
+          
             #if changing the final point is desired to generate completely independent
             #to final position models
             if np.mod(nb_episodes,config["POINTB_CHANGE"]) == 0:
@@ -193,7 +193,7 @@ def train():
                 action = np.clip(action+noise, LOW_BOUND, HIGH_BOUND)
                 
                 # Perform an action 
-                next_state, reward, done = env.step(action, state)
+                next_state, reward, done = env.step(action)
                 
                 #check if there has been divergence in the solution
                 if reward == 0 and np.array_equal(next_state,initialconditions):
