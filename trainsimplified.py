@@ -123,12 +123,6 @@ def train():
                 actionsmatrix[i][0] = i*config["DELTA_TIME"]
                 rewardsmatrix[i][0] = i*config["DELTA_TIME"]
             
-            xBvector=[]
-            xBvector.append(0)
-            yBvector=[]
-            yBvector.append(0)
-          
-            
         
         columnepisode = 1                           #parameter to classify the information 
                                                     #of each episode in matrix form
@@ -154,22 +148,6 @@ def train():
                 umatrix[rowstep][columnepisode] = cartesian_state[2]
                 vmatrix[rowstep][columnepisode] = cartesian_state[3]
           
-            #if changing the final point is desired to generate completely independent
-            #to final position models
-            if np.mod(nb_episodes,config["POINTB_CHANGE"]) == 0:
-                env.xB = np.random.uniform(config["XA"],config["XB"])
-                env.yB = np.random.uniform(-config["YB"],config["YB"])
-                    
-                while abs(np.arctan2(env.yB-env.yA,env.xB-env.xA)) < 170*np.pi/180:
-                    env.xB = np.random.uniform(config["XA"],config["XB"])
-                    env.yB = np.random.uniform(-config["YB"],config["YB"])
-                    
-                print('Final point coordinates: (',env.xB,env.yB,')')
-            
-            
-            xBvector.append(env.xB)
-            yBvector.append(env.yB)
-            
             #evaluation of steps within the current episode
             print('Episode number',nb_episodes,'keep waiting...')
             #check that not finished the episode

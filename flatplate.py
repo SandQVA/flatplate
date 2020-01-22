@@ -23,6 +23,9 @@ class FlatPlateModel:
         self.yB = finalposition[1]
         self.B = np.array([self.xB,self.yB])
         self.rhoAB = np.linalg.norm(self.A-self.B)
+        self.diffyAB_init = abs(self.yA-self.yB)
+
+        self.threshold_angle = 10
 
         self.BA = self.A-self.B
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
@@ -42,7 +45,12 @@ class FlatPlateModel:
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
 
         self.nb_ep = 0
-   
+        self.nb_pointB_change =0
+
+
+        self.B_array = np.zeros([self.config["MAX_EPISODES"]//self.config["POINTB_CHANGE"]+1, 2])
+        self.B_array[self.nb_pointB_change, :] = self.B
+
  
     #compute next state, reward and done or not
     def step(self,action):
@@ -73,8 +81,10 @@ class FlatPlateModel:
             self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
         else:
             self.state = state
+
         self.nb_ep +=1
-        print(self.nb_ep)
+        if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
+            self.update_B()
 
         return self.state
 
@@ -154,5 +164,25 @@ class FlatPlateModel:
         return cartesian_state
 
 
-#    def update_coords_B(self):
-#        skfms
+    # update B coordinates as required in the CFD config file
+    def update_B(self):
+        self.nb_pointB_change +=1
+
+        self.xB = np.random.uniform(self.xA, self.config["XB"])
+        self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
+
+        # keep iterating until the absolute angle between A and B is below 10 degrees
+        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle*np.pi/180:
+            self.xB = np.random.uniform(self.xA, self.config["XB"])
+            self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
+
+        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180)
+        print('Final point coordinates: (',self.xB,self.yB,')')
+
+        self.B = np.array([self.xB,self.yB])
+        self.rhoAB = np.linalg.norm(self.A-self.B)
+        self.BA = self.A-self.B
+        self.phiA = np.arctan2(self.BA[1],self.BA[0])
+        
+        self.B_array[self.nb_pointB_change, :] = self.B 
+        #print(self.B_array)
