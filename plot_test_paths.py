@@ -16,7 +16,7 @@ from flatplate import FlatPlateModel
 with open('configuration.yaml', 'r') as file:
     config = yaml.safe_load(file)
 
-folder = f'runsFlatPlate/FlatPlate_2019-12-19_17-37-17'
+folder = f'runsFlatPlate/FlatPlate_2020-01-17_16-44-42'
         
 with open(folder+'/configuration.yaml', 'w') as file:
     yaml.dump(config, file)
@@ -62,9 +62,9 @@ reds = plt.get_cmap("cool")
 plt.cla()
 #for i in range(1,xmatrix.shape[1]):    
     #plt.plot(xmatrix[:,config["RANDOM_EPISODES"]],ymatrix[:,config["RANDOM_EPISODES"]],label='First AI path')
-plt.plot(xmatrix[:,-1],ymatrix[:,-1],'.', label='test', linewidth=1, markersize=2)
-plt.plot(xmatrix_train[:,-1],ymatrix_train[:,-1],'.', label='last train', linewidth=1, markersize=2)
 plt.plot([xA,xB],[yA,yB],label='Ideal path', color='black', ls='--')
+plt.plot(xmatrix_train[:,-1],ymatrix_train[:,-1],'.', label='last train', linewidth=1, markersize=2)
+plt.plot(xmatrix[:,-1],ymatrix[:,-1],'.', label='test', linewidth=1, markersize=2, color='red')
 plt.grid()
 plt.title('Trajectory modification', fontsize=18)
 plt.xlabel('x position (m)', fontsize=14)
