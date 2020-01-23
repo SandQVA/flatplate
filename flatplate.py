@@ -47,10 +47,16 @@ class FlatPlateModel:
         self.nb_ep = 0
         self.nb_pointB_change =0
 
-
         self.B_array = np.zeros([self.config["MAX_EPISODES"]//self.config["POINTB_CHANGE"]+1, 2])
         self.B_array[self.nb_pointB_change, :] = self.B
-
+    
+        self.var_episode = [0]
+        self.variables = ['x', 'y', 'u', 'v', 'actions', 'rewards']
+        self.dt_array = np.array([i*config["DELTA_TIME"] for i in range(config["MAX_STEPS"]+1)])
+        self.var_array = np.zeros([len(self.variables), config["MAX_EPISODES"],config["MAX_STEPS"]+1])
+        # fill array with initial state
+        for i in range(len(self.cartesian_init)):
+            self.var_array[i,:,0] = self.cartesian_init[i]
  
     #compute next state, reward and done or not
     def step(self,action):
@@ -72,6 +78,9 @@ class FlatPlateModel:
         
         reward = self.compute_reward(old_polar_state, action, new_polar_state)
         done = self.isdone(new_polar_state)
+
+        # save data for printing
+        self.var_episode.append([new_cartesian_state[0], new_cartesian_state[1], new_cartesian_state[2], new_cartesian_state[3], self.alpha/np.pi*180, reward])
         
         return [self.state, reward, done]
 
@@ -83,6 +92,7 @@ class FlatPlateModel:
             self.state = state
 
         self.nb_ep +=1
+        self.var_episode = []
         if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
             self.update_B()
 
@@ -186,3 +196,22 @@ class FlatPlateModel:
         
         self.B_array[self.nb_pointB_change, :] = self.B 
         #print(self.B_array)
+
+
+    def fill_array_tobesaved(self):
+        for i in range(len(self.variables)):
+            for k in range(len(self.var_episode)):
+                self.var_array[i, self.nb_ep-1, k+1] = self.var_episode[k][i]
+        #print(self.var_array)
+
+
+    def print_arrays_in_file(self, folder):
+        for i, var in enumerate(self.variables):
+            filename = folder+'/'+var+'.csv'
+            np.savetxt(filename, self.var_array[i,:,:], delimiter=";")
+ 
+        filename = folder+'/Bcoordinates.csv'
+        np.savetxt(filename, self.B_array, delimiter=";")
+
+        filename = folder+'/time.csv'
+        np.savetxt(filename, self.dt_array, delimiter=";")

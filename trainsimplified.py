@@ -106,24 +106,6 @@ def train():
         nb_episodes = 1 
         rewards = []                                #rewards array to be filled with episodes rewards
         
-        if config["MODEL"] == "FlatPlate":
-            #definition of a null matrix to later fill with the values of x, y, u, v, actions and rewards parameters
-            xmatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            ymatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            umatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            vmatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            actionsmatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            rewardsmatrix = np.zeros([config["MAX_STEPS"]+1,config["MAX_EPISODES"]+1])
-            
-            for i in range(config["MAX_STEPS"]+1):
-                xmatrix[i][0] = i*config["DELTA_TIME"]
-                ymatrix[i][0] = i*config["DELTA_TIME"]
-                umatrix[i][0] = i*config["DELTA_TIME"]
-                vmatrix[i][0] = i*config["DELTA_TIME"]
-                actionsmatrix[i][0] = i*config["DELTA_TIME"]
-                rewardsmatrix[i][0] = i*config["DELTA_TIME"]
-            
-        
         columnepisode = 1                           #parameter to classify the information 
                                                     #of each episode in matrix form
         
@@ -139,15 +121,6 @@ def train():
             
             state = env.reset()                     #reset the model to start a new sequence
             
-            #NOT NEEDED FOR THE EVALUATION, BUT HELPFUL FOR RESULTS INTERPRETATION
-            #colletion of matrices with the information each episode step by step
-            if config["MODEL"] == "FlatPlate":
-                cartesian_state = env.get_state_in_absolute_cartesian_coordinates(state)
-                xmatrix[rowstep][columnepisode] = cartesian_state[0]
-                ymatrix[rowstep][columnepisode] = cartesian_state[1]
-                umatrix[rowstep][columnepisode] = cartesian_state[2]
-                vmatrix[rowstep][columnepisode] = cartesian_state[3]
-          
             #evaluation of steps within the current episode
             print('Episode number',nb_episodes,'keep waiting...')
             #check that not finished the episode
@@ -194,19 +167,10 @@ def train():
                 step += 1
                 nb_total_steps += 1
                 
-                #NOT NEEDED FOR THE EVALUATION, BUT HELPFUL FOR RESULTS INTERPRETATION
-                #colletion of matrices with the information each episode step by step
-                if config["MODEL"] == "FlatPlate":
-                    #update the matrices to later export them
-                    cartesian_state = env.get_state_in_absolute_cartesian_coordinates(next_state)        
-                    xmatrix[rowstep][columnepisode] = cartesian_state[0]
-                    ymatrix[rowstep][columnepisode] = cartesian_state[1]
-                    umatrix[rowstep][columnepisode] = cartesian_state[2]
-                    vmatrix[rowstep][columnepisode] = cartesian_state[3]
-                    actionsmatrix[rowstep][columnepisode] = action[0]*180/np.pi
-                    rewardsmatrix[rowstep][columnepisode] = reward
-                
                 #------------------------------- finish steps
+
+            # SAVE variables at the end of episode
+            env.fill_array_tobesaved()
             #increase the episode number    
             columnepisode += 1
             #add the total reward in the episode
@@ -242,49 +206,31 @@ def train():
         
     finally:        
         
+        # DUMP variables at the end of episode
+        env.print_arrays_in_file(folder)
+
         writer.close()
         model.save()
         print("\033[91m\033[1mModel saved in", folder, "\033[0m")
         
         plt.show()
-        #------------------- NOT NEEDED FOR THE CODE ITSELF ----------------------
-        #save to external files the information about the states to evaluate in a
-        #proper way what is happening at a time and episode
-        if config["MODEL"] == "FlatPlate":
-            #in case of wanting to export the information 
-            filex = folder+'/xplate'+'.csv'
-            filey = folder+'/yplate'+'.csv'
-            fileu = folder+'/uplate'+'.csv'
-            filev = folder+'/vplate'+'.csv'
-            fileactions = folder+'/actions'+'.csv'
-            filerewards = folder+'/rewards'+'.csv'
-            np.savetxt(filex, xmatrix[:,0:nb_episodes], delimiter=";")
-            np.savetxt(filey, ymatrix[:,0:nb_episodes], delimiter=";")
-            np.savetxt(fileu, umatrix[:,0:nb_episodes], delimiter=";")
-            np.savetxt(filev, vmatrix[:,0:nb_episodes], delimiter=";")
-            np.savetxt(fileactions, actionsmatrix[:,0:nb_episodes], delimiter=";")
-            np.savetxt(filerewards, rewardsmatrix[:,0:nb_episodes], delimiter=";")
-            filexB = folder+'/xB'+'.csv'
-            fileyB = folder+'/yB'+'.csv'
-            np.savetxt(filexB, xBvector[0:nb_episodes], delimiter=";")
-            np.savetxt(fileyB, yBvector[0:nb_episodes], delimiter=";")
             
-            print('Information saved in corresponding .csv files')
+        print('Information saved in corresponding .csv files')
             
             #plot some paths (first random, first computed by AI, last path, ideal path)
-            plt.cla()
-            plt.plot(xmatrix[:,1],ymatrix[:,1],label='First random path')
-            plt.plot(xmatrix[:,config["RANDOM_EPISODES"]],ymatrix[:,config["RANDOM_EPISODES"]],label='First AI path')
-            plt.plot(xmatrix[:,nb_episodes-1],ymatrix[:,nb_episodes-1],label='Last path')
-            plt.plot([xA,xB],[yA,yB],label='Ideal path')
-            plt.grid()
-            plt.title('Trajectory modification', fontsize=18)
-            plt.xlabel('x position (m)', fontsize=14)
-            plt.ylabel('y position (m)', fontsize=14)
-            plt.xticks(fontsize=13)
-            plt.yticks(fontsize=13)
-            plt.legend(fontsize = 14)
-            plt.savefig(folder+'/trajectory.png')
+          # plt.cla()
+          # plt.plot(xmatrix[:,1],ymatrix[:,1],label='First random path')
+          # plt.plot(xmatrix[:,config["RANDOM_EPISODES"]],ymatrix[:,config["RANDOM_EPISODES"]],label='First AI path')
+          # plt.plot(xmatrix[:,nb_episodes-1],ymatrix[:,nb_episodes-1],label='Last path')
+          # plt.plot([xA,xB],[yA,yB],label='Ideal path')
+          # plt.grid()
+          # plt.title('Trajectory modification', fontsize=18)
+          # plt.xlabel('x position (m)', fontsize=14)
+          # plt.ylabel('y position (m)', fontsize=14)
+          # plt.xticks(fontsize=13)
+          # plt.yticks(fontsize=13)
+          # plt.legend(fontsize = 14)
+          # plt.savefig(folder+'/trajectory.png')
         
         
     time_execution = time.time() - time_beginning
