@@ -1,21 +1,22 @@
 MODEL : "FlatPlate"
 
 #------- DDPG already tunned -----------------
-HIDDEN_LAYERS : [400, 300]     # Size of the NN
-MEMORY_CAPACITY : 1000000
+HIDDEN_LAYERS : [8, 8]     # Size of the NN
+MEMORY_CAPACITY : 50000
 BATCH_SIZE : 64
 GAMMA : 0.99
 LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
 TAU : 0.005
 EXPLO_SIGMA : 0.01             # Exploration noise
+ACTION_SIGMA : 0.
 #---------------------------------------------
 
 
 #------- Set up of training details ----------
-MAX_EPISODES : 100              # max number of episodes (full path)
-MAX_STEPS : 500                # max number of steps per episode (steps per path)
-RANDOM_EPISODES : 5           # number of initial random episodes to get information for the AI
+MAX_EPISODES : 500              # max number of episodes (full path)
+MAX_STEPS : 350                # max number of steps per episode (steps per path)
+RANDOM_EPISODES : 1           # number of initial random episodes to get information for the AI
 POINTB_CHANGE : 2000           # number of episodes keeping same final point if
                                # desired to change the final point of the path
 #---------------------------------------------
@@ -29,13 +30,13 @@ TEST_EPISODES : 5              # number of episodes for testing
 # Solver details (for the set of differential equations)
 DELTA_TIME : 0.0001             #time step
 # initial and final conditions to reach
-XA : 0
-YA : 0
+XA : 0.06
+YA : 0.035
 UA : -1  # 3.1333
-VA : 0
+VA : 0.1
 # set as final conditions a point located with at most 10degrees from the horizontal
 # axis with respect to the initial point
-XB : -0.05
-YB : 0.001
+XB : 0.03
+YB : 0.04
 
 FREQ_PLOT : 10

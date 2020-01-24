@@ -18,7 +18,7 @@ with open('configuration.yaml', 'r') as file:
 
 
 #folder = f'runsFlatPlate/{config["MODEL"].split("-")[0]}_{current_time}'
-folder = f'runsFlatPlate/FlatPlate_2019-12-05_18-32-27'
+folder = f'runsFlatPlate/'
 if not os.path.exists(folder+'/plots/'):
     os.mkdir(folder+'/plots/')
         
@@ -70,7 +70,7 @@ for i in range(1,nb_episodes):
     #plt.plot(xmatrix[:,config["RANDOM_EPISODES"]],ymatrix[:,config["RANDOM_EPISODES"]],label='First AI path')
     for j in range(1,i):
         #plt.plot(xmatrix[:,j],ymatrix[:,j],label='', color=reds(j*(1/config["MAX_EPISODES"]) ), linewidth=0.5)
-        plt.plot(xmatrix[:-5,j],ymatrix[:-5,j],label='', linewidth=1)
+        plt.plot(xmatrix[:-5,j],ymatrix[:-5,j],'.', label='', linewidth=1, markersize='1')
     plt.plot([xA,xB],[yA,yB],label='Ideal path', color='black', ls='--')
     plt.grid()
     plt.title('Trajectory modification', fontsize=18)
@@ -78,6 +78,8 @@ for i in range(1,nb_episodes):
     plt.ylabel('y position (m)', fontsize=14)
     plt.xticks(fontsize=13)
     plt.yticks(fontsize=13)
+    plt.xlim([0.025, 0.065])
+    plt.ylim([0.025, 0.045])
     plt.legend(fontsize = 14)
     plt.savefig(folder+'/plots/trajectory_'+str(i)+'.png')
 
