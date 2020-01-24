@@ -6,6 +6,7 @@ Last modified jan 17 2020 by Sandrine
 
 import numpy as np
 from scipy.integrate import odeint
+import collections
 
 
 class FlatPlateModel:
@@ -43,6 +44,10 @@ class FlatPlateModel:
         
         self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
+
+        action_space = collections.namedtuple('action_space', ['low', 'high'])(-15/180*np.pi, 15/180*np.pi)
+        action_size = 1
+        state_size = self.state.shape[0]
 
         self.nb_ep = 0
         self.nb_pointB_change =0
