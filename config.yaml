@@ -1,3 +1,4 @@
+# config file for DDPG
 GAME : "flateplate"
 # GAME : "BipedalWalker-v2"
 # GAME : "RoboschoolHalfCheetah-v0"
@@ -14,13 +15,17 @@ LEARNING_RATE_ACTOR : 0.001
 TAU : 0.005
 
 EXPLO_SIGMA : 0.05  # Exploration noise
+# next 2 only used if agent TD3
+UPDATE_SIGMA : 0.2
+UPDATE_CLIP : 0.5
 
-MAX_EPISODES : 500
+MAX_EPISODES : 10
 MAX_STEPS : 350  # Max steps per episode
 
 FREQ_PLOT : 5
 FREQ_EVAL : 25
 FREQ_SAVE : 250
+
 
 #---------------------------------------------
 # Solver details (for the set of differential equations)
