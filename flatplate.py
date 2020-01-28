@@ -108,7 +108,7 @@ class FlatPlate:
         return self.state
 
 
-    def render(self):
+    def render(self, mode='human'):
         pass
 
 
