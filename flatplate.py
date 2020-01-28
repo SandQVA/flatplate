@@ -7,6 +7,7 @@ Last modified jan 17 2020 by Sandrine
 import numpy as np
 from scipy.integrate import odeint
 import collections
+import matplotlib.pyplot as plt
 
 
 class FlatPlate:
@@ -222,10 +223,9 @@ class FlatPlate:
         for i in range(len(self.variables)):
             for k in range(len(self.var_episode)):
                 self.var_array[i, self.nb_ep-1, k+1] = self.var_episode[k][i]
-        #print(self.var_array)
 
 
-    def print_arrays_in_file(self, folder):
+    def print_array_in_files(self, folder):
         for i, var in enumerate(self.variables):
             filename = folder+'/'+var+'.csv'
             np.savetxt(filename, self.var_array[i,:,:], delimiter=";")
@@ -235,3 +235,34 @@ class FlatPlate:
 
         filename = folder+'/time.csv'
         np.savetxt(filename, self.dt_array, delimiter=";")
+
+
+    def plot_some_training_paths(self, folder):
+        # TODO optimize this to avoid recomputing everything
+        xfirst = np.trim_zeros(self.var_array[0,0,:], 'b')
+        yfirst = self.var_array[1,0,:len(xfirst)]
+        xlast = np.trim_zeros(self.var_array[0,-1,:], 'b')
+        ylast = self.var_array[1,-1,:len(xlast)] 
+
+        cumulative_reward = self.var_array[5,:,:].sum(axis=1)
+
+        best = np.argmax(cumulative_reward)
+        xbest = np.trim_zeros(self.var_array[0,best,:], 'b')
+        ybest = self.var_array[1,best,:len(xbest)]
+
+        worst = np.argmin(cumulative_reward)
+        xworst = np.trim_zeros(self.var_array[0,worst,:], 'b')
+        yworst = self.var_array[1,worst,:len(xworst)]
+
+        plt.cla()
+        plt.title(folder.rsplit('/', 1)[1])
+        plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
+        plt.plot(xfirst, yfirst, label='first path')
+        plt.plot(xlast, ylast, label='last path ep='+str(self.config['MAX_EPISODES']))
+        plt.plot(xbest, ybest, label='best path ep='+str(best))
+        plt.plot(xworst, yworst, label='worst path ep='+str(worst))
+        plt.grid()
+        plt.xlabel('x (m)', fontsize=14)
+        plt.ylabel('y (m)', fontsize=14)
+        plt.legend(fontsize = 14)
+        plt.savefig(f'{folder}/some_trajectories.png')
