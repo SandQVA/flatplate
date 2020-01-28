@@ -9,19 +9,19 @@ from scipy.integrate import odeint
 import collections
 
 
-class FlatPlateModel:
+class FlatPlate:
     
-    def __init__(self,initialconditions,finalposition,config):
+    def __init__(self,config):
         
         self.config = config
-        
-        self.xA = initialconditions[0]
-        self.yA = initialconditions[1]
+       
+        self.xA = config["XA"]
+        self.yA = config["YA"]
         self.A = np.array([self.xA,self.yA])
-        self.uA = initialconditions[2]
-        self.vA = initialconditions[3]
-        self.xB = finalposition[0]
-        self.yB = finalposition[1]
+        self.uA = config["UA"]
+        self.vA = config["VA"]
+        self.xB = config["XB"]
+        self.yB = config["YB"] 
         self.B = np.array([self.xB,self.yB])
         self.rhoAB = np.linalg.norm(self.A-self.B)
         self.diffyAB_init = abs(self.yA-self.yB)
@@ -45,9 +45,12 @@ class FlatPlateModel:
         self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
 
-        action_space = collections.namedtuple('action_space', ['low', 'high'])(-15/180*np.pi, 15/180*np.pi)
-        action_size = 1
-        state_size = self.state.shape[0]
+        # attributs needed by the sureli code or gym wrappers
+        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-15/180*np.pi, 15/180*np.pi, (1,))
+        self.action_size = 1
+        self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.cartesian_init.shape)
+        self.reward_range = None
+        self.metadata = None
 
         self.nb_ep = 0
         self.nb_pointB_change =0
@@ -87,7 +90,7 @@ class FlatPlateModel:
         # save data for printing
         self.var_episode.append([new_cartesian_state[0], new_cartesian_state[1], new_cartesian_state[2], new_cartesian_state[3], self.alpha/np.pi*180, reward])
         
-        return [self.state, reward, done]
+        return [self.state, reward, done, None]
 
 
     def reset(self, state=None):
@@ -102,6 +105,18 @@ class FlatPlateModel:
             self.update_B()
 
         return self.state
+
+
+    def render(self):
+        pass
+
+
+    def close(self):
+        pass
+
+
+    def seed(self):
+        pass
 
 
     # differential equations system for flat plate
