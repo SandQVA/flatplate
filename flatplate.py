@@ -86,7 +86,10 @@ class FlatPlate:
         self.state = new_polar_state
         
         reward = self.compute_reward(old_polar_state, action, new_polar_state)
-        done = self.isdone(new_polar_state)
+        won, lost = self.is_won_or_lost(new_polar_state)
+        done = self.isdone(won, lost)
+        if done:
+            reward = self.update_reward_if_done(reward, won, lost)
 
         # save data for printing
         self.var_episode.append([new_cartesian_state[0], new_cartesian_state[1], new_cartesian_state[2], new_cartesian_state[3], self.alpha/np.pi*180, reward])
@@ -147,20 +150,40 @@ class FlatPlate:
     def compute_reward(self, old_polar_state, action, new_polar_state):
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
-        #reward = -10000*delta_rho # go to goal
-        reward = -10000*delta_rho -1 # go to goal through the shortest path
+        reward = -10000*delta_rho # go to goal
+        #reward = -10000*delta_rho -1 # go to goal through the shortest path
+        #reward = -1 # go to goal the quickest possible
         #reward = -delta_rho - delta_abs_theta # go to goal along the AB line
 
         return reward
 
+
+    def update_reward_if_done(self, reward, won, lost):
+        if won: reward += 100
+        elif lost: reward += -100
+
+        return reward
+
     
-    def isdone(self, polar_state):
+    def isdone(self, won, lost):
         done = False
-        #done if the final point is almost reached or if abs(theta) >= pi/2
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3) or np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
+        if won or lost:
             done = True
+
         return done
     
+
+    def is_won_or_lost(self, polar_state):
+        won = False
+        lost = False
+
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3):
+            won = True
+        elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
+            lost = True
+
+        return won, lost
+
 
     def get_state_in_relative_polar_coordinates(self, cartesian_state):
         BP = cartesian_state[0:2]-self.B
@@ -266,3 +289,27 @@ class FlatPlate:
         plt.ylabel('y (m)', fontsize=14)
         plt.legend(fontsize = 14)
         plt.savefig(f'{folder}/some_trajectories.png')
+
+
+    def plot_some_testing_paths(self, folder):
+        # TODO optimize this to avoid recomputing everything
+        xlast = np.trim_zeros(self.var_array[0,9,:], 'b')
+        ylast = self.var_array[1,9,:len(xlast)]
+
+        filex_train = f'{folder}/../x.csv'
+        filey_train = f'{folder}/../y.csv'
+        xmatrix_train = np.loadtxt(filex_train, delimiter=";")
+        ymatrix_train = np.loadtxt(filey_train, delimiter=";")
+        xlasttrain = np.trim_zeros(xmatrix_train[-1,:], 'b')
+        ylasttrain = ymatrix_train[-1,:len(xlasttrain)]
+ 
+        plt.cla()
+        plt.title(folder.rsplit('/', 1)[1])
+        plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
+        plt.plot(xlasttrain, ylasttrain, label='last training path')
+        plt.plot(xlast, ylast, label='test path')
+        plt.grid()
+        plt.xlabel('x (m)', fontsize=14)
+        plt.ylabel('y (m)', fontsize=14)
+        plt.legend(fontsize = 14)
+        plt.savefig(f'{folder}/test_trajectory.png')
