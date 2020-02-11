@@ -19,7 +19,7 @@ EXPLO_SIGMA : 0.05  # Exploration noise
 UPDATE_SIGMA : 0.2
 UPDATE_CLIP : 0.5
 
-MAX_EPISODES : 10
+MAX_EPISODES : 1000
 MAX_STEPS : 350  # Max steps per episode
 
 FREQ_PLOT : 5
@@ -39,6 +39,6 @@ VA : 0.1
 # axis with respect to the initial point
 XB : 0.03
 YB : 0.04
-POINTB_CHANGE : 2000           # number of episodes keeping same final point if
+POINTB_CHANGE : 200000           # number of episodes keeping same final point if
                                # desired to change the final point of the path
 ACTION_SIGMA : 0
