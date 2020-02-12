@@ -7,6 +7,9 @@ Last modified jan 17 2020 by Sandrine
 import numpy as np
 from scipy.integrate import odeint
 import collections
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
@@ -143,7 +146,7 @@ class FlatPlate:
         dudt = self.Drag/self.m 
         dvdt = self.g + self.mr * V**2 * (self.alpha + alphainduced) 
         
-        computedstate = np.array([dxdt, dydt, dudt, dvdt])
+        computedstate = np.array([dxdt, dydt, dudt, dvdt]).astype(float)
         return computedstate
 
 
