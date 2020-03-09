@@ -30,11 +30,10 @@ class FlatPlate:
         self.rhoAB = np.linalg.norm(self.A-self.B)
         self.diffyAB_init = abs(self.yA-self.yB)
 
-        self.threshold_angle = 10
-
         self.BA = self.A-self.B
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
+        self.threshold_angle = 10
         self.Drag = 0                                   #not considering drag forces
         self.c = 0.1                                    #flat plate chord
         self.L = 1                                      #flat plate length
@@ -69,33 +68,28 @@ class FlatPlate:
         # fill array with initial state
         for i in range(len(self.cartesian_init)):
             self.var_array[i,:,0] = self.cartesian_init[i]
+
  
-    #compute next state, reward and done or not
     def step(self,action):
-        #alpha is the action
-        self.alpha = action
         old_polar_state = self.state
-        #if some noise is wanted to be added to 'model' turbulence effects
         self.alpha = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
         
-        #time vector with initial and final point of the step
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
         #y = odeint(model, y0, t)
         odestates = odeint(self.flatplate,old_cartesian_state,timearray)
         #as odeint will return two different states, choose the second one
         new_cartesian_state = odestates[-1]
-        new_polar_state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
-        self.state = new_polar_state
+        self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
         
-        reward = self.compute_reward(old_polar_state, action, new_polar_state)
-        won, lost = self.is_won_or_lost(new_polar_state)
+        reward = self.compute_reward(old_polar_state, action, self.state)
+        won, lost = self.is_won_or_lost(self.state)
         done = self.isdone(won, lost)
         if done:
             reward = self.update_reward_if_done(reward, won, lost)
 
         # save data for printing
-        self.var_episode.append([new_cartesian_state[0], new_cartesian_state[1], new_cartesian_state[2], new_cartesian_state[3], self.alpha/np.pi*180, reward])
+        self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.alpha/np.pi*180) + [reward]]
         
         return [self.state, reward, done, None]
 
@@ -127,8 +121,7 @@ class FlatPlate:
 
 
     # differential equations system for flat plate
-    def flatplate(self, polar_state, t):
-        cartesian_state = self.get_state_in_absolute_cartesian_coordinates(polar_state)
+    def flatplate(self, cartesian_state, t):
         u = cartesian_state[2]
         v = cartesian_state[3]
         
@@ -154,9 +147,6 @@ class FlatPlate:
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
         reward = -10000*delta_rho # go to goal
-        #reward = -10000*delta_rho -1 # go to goal through the shortest path
-        #reward = -1 # go to goal the quickest possible
-        #reward = -delta_rho - delta_abs_theta # go to goal along the AB line
 
         return reward
 
@@ -242,7 +232,6 @@ class FlatPlate:
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
         
         self.B_array[self.nb_pointB_change, :] = self.B 
-        #print(self.B_array)
 
 
     def fill_array_tobesaved(self):
