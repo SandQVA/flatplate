@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jun 12 17:17:59 2019 by Andrea
-Last modified jan 17 2020 by Sandrine
+Last modified jun 7 2020 by Sandrine
 """
 
 import numpy as np
@@ -19,6 +19,7 @@ class FlatPlate:
         
         self.config = config
        
+        # initial and target conditions from config file
         self.xA = config["XA"]
         self.yA = config["YA"]
         self.A = np.array([self.xA,self.yA])
@@ -33,34 +34,37 @@ class FlatPlate:
         self.BA = self.A-self.B
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
-        self.threshold_angle = 10
-        self.Drag = 0                                   #not considering drag forces
-        self.c = 0.1                                    #flat plate chord
-        self.L = 1                                      #flat plate length
-        self.t = 0.01                                   #flat plate thickness
-        self.S = self.c*self.L
-        self.rho_plate = 0.5*2                          #flat plate density (paper of 500g/m^2 density)
-        self.m = self.rho_plate*self.L*self.c*self.t    #flate plate mass
+        # some parameters
+        self.threshold_angle = 10                       # threshold angle for B update
+        self.Drag = 0                                   # drag forces (set to zero)
+        self.c = 0.1                                    # flat plate chord
+        self.L = 1                                      # flat plate length
+        self.t = 0.02                                   # flat plate thickness
+        self.S = self.c*self.L                          # flat plate surface
+        self.rho_plate = 0.5*2                          # flat plate density (paper of 500g/m^2 density)
+        self.m = self.rho_plate*self.L*self.c*self.t    # flate plate mass
         self.rho_air = 1.18415
-        self.mr = (self.rho_air*self.S*np.pi)/self.m
-        self.g = -9.806                                 #gravity taking into account the reference system
+        self.mr = (self.rho_air*self.S*np.pi)/self.m    # flat plate reduced mass
+        self.g = -9.806                                 # gravity
         
+        # state initialisation
         self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
 
-        # attributs needed by the sureli code or gym wrappers
+        # attributs needed by the rl code or gym wrappers
         self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-15/180*np.pi, 15/180*np.pi, (1,))
         self.action_size = 1
         self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.cartesian_init.shape)
         self.reward_range = None
         self.metadata = None
 
+        # B coords array (size depending on update number)
         self.nb_ep = 0
-        self.nb_pointB_change =0
-
+        self.nb_pointB_change = 0
         self.B_array = np.zeros([self.config["MAX_EPISODES"]//self.config["POINTB_CHANGE"]+1, 2])
         self.B_array[self.nb_pointB_change, :] = self.B
-    
+
+        # dt_array and var_array initialisation (for plotting purposes only, not required by the application)    
         self.var_episode = [0]
         self.variables = ['x', 'y', 'u', 'v', 'actions', 'rewards']
         self.dt_array = np.array([i*config["DELTA_TIME"] for i in range(config["MAX_STEPS"]+1)])
@@ -74,14 +78,14 @@ class FlatPlate:
         old_polar_state = self.state
         self.alpha = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
         
+        # solve differential equation
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        #y = odeint(model, y0, t)
-        odestates = odeint(self.flatplate,old_cartesian_state,timearray)
-        #as odeint will return two different states, choose the second one
-        new_cartesian_state = odestates[-1]
+        odestates = odeint(self.flatplate,old_cartesian_state,timearray) # y = odeint(model, y0, t)
+        new_cartesian_state = odestates[-1] # choose second state returned by odeint
         self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
-        
+       
+        # compute reward and check if the episode is over (done)
         reward = self.compute_reward(old_polar_state, action, self.state)
         won, lost = self.is_won_or_lost(self.state)
         done = self.isdone(won, lost)
@@ -108,14 +112,17 @@ class FlatPlate:
         return self.state
 
 
+    # defined in order to mimic a gym environment
     def render(self, mode='human'):
         pass
 
 
+    # defined in order to mimic a gym environment
     def close(self):
         pass
 
 
+    # defined in order to mimic a gym environment
     def seed(self):
         pass
 
@@ -146,14 +153,16 @@ class FlatPlate:
     def compute_reward(self, old_polar_state, action, new_polar_state):
         delta_rho = new_polar_state[0] - old_polar_state[0]
         delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
-        reward = -10000*delta_rho # go to goal
+        #reward = -10000*delta_rho # go to goal
+        reward = (-100*delta_rho/self.rhoAB - 2*np.abs(new_polar_state[1])/np.pi)*10
+
 
         return reward
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if won: reward += 100
-        elif lost: reward += -100
+        if won: reward += 1000
+        elif lost: reward += -1000
 
         return reward
 
@@ -177,6 +186,30 @@ class FlatPlate:
 
         return won, lost
 
+
+    def update_B(self):
+        self.nb_pointB_change +=1
+
+        self.xB = np.random.uniform(self.xA, self.config["XB"])
+        self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
+
+        # keep iterating until the absolute angle between A and B is below 10 degrees
+        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle*np.pi/180:
+            self.xB = np.random.uniform(self.xA, self.config["XB"])
+            self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
+
+        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180)
+        print('Final point coordinates: (',self.xB,self.yB,')')
+
+        self.B = np.array([self.xB,self.yB])
+        self.rhoAB = np.linalg.norm(self.A-self.B)
+        self.BA = self.A-self.B
+        self.phiA = np.arctan2(self.BA[1],self.BA[0])
+        
+        self.B_array[self.nb_pointB_change, :] = self.B 
+
+
+# Below are only utility functions ------------------------------------------
 
     def get_state_in_relative_polar_coordinates(self, cartesian_state):
         BP = cartesian_state[0:2]-self.B
@@ -209,29 +242,6 @@ class FlatPlate:
         cartesian_state = np.array([x, y, u, v])
 
         return cartesian_state
-
-
-    # update B coordinates as required in the CFD config file
-    def update_B(self):
-        self.nb_pointB_change +=1
-
-        self.xB = np.random.uniform(self.xA, self.config["XB"])
-        self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
-
-        # keep iterating until the absolute angle between A and B is below 10 degrees
-        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle*np.pi/180:
-            self.xB = np.random.uniform(self.xA, self.config["XB"])
-            self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
-
-        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180)
-        print('Final point coordinates: (',self.xB,self.yB,')')
-
-        self.B = np.array([self.xB,self.yB])
-        self.rhoAB = np.linalg.norm(self.A-self.B)
-        self.BA = self.A-self.B
-        self.phiA = np.arctan2(self.BA[1],self.BA[0])
-        
-        self.B_array[self.nb_pointB_change, :] = self.B 
 
 
     def fill_array_tobesaved(self):
