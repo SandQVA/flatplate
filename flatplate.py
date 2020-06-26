@@ -39,7 +39,7 @@ class FlatPlate:
         self.Drag = 0                                   # drag forces (set to zero)
         self.c = 0.1                                    # flat plate chord
         self.L = 1                                      # flat plate length
-        self.t = 0.02                                   # flat plate thickness
+        self.t = 0.01                                   # flat plate thickness
         self.S = self.c*self.L                          # flat plate surface
         self.rho_plate = 0.5*2                          # flat plate density (paper of 500g/m^2 density)
         self.m = self.rho_plate*self.L*self.c*self.t    # flate plate mass
@@ -161,8 +161,8 @@ class FlatPlate:
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if won: reward += 1000
-        elif lost: reward += -1000
+        if won: reward += 100
+        elif lost: reward += -100
 
         return reward
 
@@ -254,7 +254,7 @@ class FlatPlate:
         for i, var in enumerate(self.variables):
             filename = folder+'/'+var+'.csv'
             np.savetxt(filename, self.var_array[i,:,:], delimiter=";")
- 
+
         filename = folder+'/Bcoordinates.csv'
         np.savetxt(filename, self.B_array, delimiter=";")
 
@@ -262,7 +262,7 @@ class FlatPlate:
         np.savetxt(filename, self.dt_array, delimiter=";")
 
 
-    def plot_some_training_paths(self, folder):
+    def plot_training_output(self, rewards, folder):
         # TODO optimize this to avoid recomputing everything
         xfirst = np.trim_zeros(self.var_array[0,0,:], 'b')
         yfirst = self.var_array[1,0,:len(xfirst)]
@@ -280,7 +280,11 @@ class FlatPlate:
         yworst = self.var_array[1,worst,:len(xworst)]
 
         plt.cla()
-        plt.title(folder.rsplit('/', 1)[1])
+        plt.figure(figsize=(10, 5))
+        plt.tight_layout()
+        plt.suptitle(folder.rsplit('/', 1)[1])
+        plt.subplot(1,2,1)
+        plt.title('Trajectories')
         plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
         plt.plot(xfirst, yfirst, label='first path')
         plt.plot(xlast, ylast, label='last path ep='+str(self.config['MAX_EPISODES']))
@@ -289,29 +293,61 @@ class FlatPlate:
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
-        plt.legend(fontsize = 14)
-        plt.savefig(f'{folder}/some_trajectories.png')
+        plt.legend(fontsize = 10, loc='best')
 
+        plt.subplot(1,2,2)
+        plt.title('Training reward')
+        plt.plot(rewards, color='k')
+        plt.grid()
+        plt.xlabel('Episode', fontsize=14)
+        plt.ylabel('Reward', fontsize=14)
+        plt.savefig(f'{folder}/train_output.png')
 
-    def plot_some_testing_paths(self, folder):
+    def plot_testing_output(self, rewards, folder):
         # TODO optimize this to avoid recomputing everything
+        score = sum(rewards)/len(rewards) if rewards else 0
         xlast = np.trim_zeros(self.var_array[0,9,:], 'b')
         ylast = self.var_array[1,9,:len(xlast)]
 
         filex_train = f'{folder}/../x.csv'
         filey_train = f'{folder}/../y.csv'
+        filereward_train = f'{folder}/../rewards.csv'
         xmatrix_train = np.loadtxt(filex_train, delimiter=";")
         ymatrix_train = np.loadtxt(filey_train, delimiter=";")
+        rewardmatrix_train = np.loadtxt(filereward_train, delimiter=";")
         xlasttrain = np.trim_zeros(xmatrix_train[-1,:], 'b')
         ylasttrain = ymatrix_train[-1,:len(xlasttrain)]
- 
+
+        cumulative_reward = rewardmatrix_train.sum(axis=1)
+
         plt.cla()
-        plt.title(folder.rsplit('/', 1)[1])
+        plt.figure(figsize=(10, 5))
+        plt.suptitle(folder.rsplit('/', 2)[1])
+        plt.subplot(1,2,1)
         plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
         plt.plot(xlasttrain, ylasttrain, label='last training path')
         plt.plot(xlast, ylast, label='test path')
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
-        plt.legend(fontsize = 14)
-        plt.savefig(f'{folder}/test_trajectory.png')
+        plt.legend(fontsize = 10, loc='best')
+
+        t='Rewards \n'+\
+          f"   Test         = {score:9.0f}\n"+\
+          f"   Train (last) = {cumulative_reward[-1]:9.0f}"
+
+        left, width = .25, .5
+        bottom, height = .25, .5
+        right = left + width
+        top = bottom + height
+
+        ax = plt.subplot(1,2,2)
+        ax.axis('off')
+        ax.text(0.5*(left+right), 0.5*(bottom+top), t,
+                horizontalalignment='center',
+                verticalalignment='center',
+                transform=ax.transAxes,
+                color='k',
+                fontsize=12)
+
+        plt.savefig(f'{folder}/test_output.png')
