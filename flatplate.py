@@ -86,15 +86,13 @@ class FlatPlate:
         if new_cartesian_state[2] > 0:
             print('u is positive, the application has not been designed to be physically accurate in such cases')
         self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
-       
- 
+        
         # compute reward and check if the episode is over (done)
         reward = self.compute_reward(old_polar_state, action, self.state)
         won, lost = self.is_won_or_lost(self.state)
         done = self.isdone(won, lost)
         if done:
             reward = self.update_reward_if_done(reward, won, lost)
-
 
         # save data for printing
         self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.pitch_angle/np.pi*180) + [reward]]
@@ -103,16 +101,16 @@ class FlatPlate:
 
 
     def reset(self, state=None):
+        self.nb_ep +=1
+        self.var_episode = []
+        if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
+            self.update_B()
+
         if state==None:
             self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
         else:
             self.state = state
 
-        self.nb_ep +=1
-        self.var_episode = []
-        if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
-            self.update_B()
-        
         return self.state
 
 
@@ -199,6 +197,19 @@ class FlatPlate:
 
         return won, lost
 
+
+    def print_won_or_lost(self, polar_state):
+        won = False
+        lost = False
+
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3):
+            won = True
+            print('won')
+        elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
+            lost = True
+            print('lost')
+
+        return won, lost
 
 
     # update B coordinates as required in the CFD config file
