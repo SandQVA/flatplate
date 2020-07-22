@@ -35,17 +35,17 @@ class FlatPlate:
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
         # some parameters
-        self.threshold_angle = 10                       # threshold angle for B update
-        self.Drag = 0                                   # drag forces (set to zero)
-        self.c = 0.1                                    # flat plate chord
-        self.L = 1                                      # flat plate length
-        self.t = 0.01                                   # flat plate thickness
-        self.S = self.c*self.L                          # flat plate surface
-        self.rho_plate = 0.5*2                          # flat plate density (paper of 500g/m^2 density)
-        self.m = self.rho_plate*self.L*self.c*self.t    # flate plate mass
+        self.threshold_angle = 10                             # threshold angle for B update
+        #self.Drag = 0                                        # drag forces (set to zero)
+        self.c = 0.1                                          # flat plate chord
+        self.L = 1                                            # flat plate length
+        self.t = 0.01                                         # flat plate thickness
+        self.S = self.c * self.L                              # flat plate surface
+        self.rho_plate = 0.5 * 2                              # flat plate density (paper of 500g/m^2 density)
+        self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
         self.rho_air = 1.18415
-        self.mr = (self.rho_air*self.S*np.pi)/self.m    # flat plate reduced mass
-        self.g = -9.806                                 # gravity
+        self.mr = (0.5 * self.rho_air * self.S) / self.m      # flat plate reduced mass
+        self.g = -9.806                                       # gravity
         
         # state initialisation
         self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
@@ -76,15 +76,18 @@ class FlatPlate:
  
     def step(self,action):
         old_polar_state = self.state
-        self.alpha = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+        self.pitch_angle = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
         
         # solve differential equation
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        odestates = odeint(self.flatplate,old_cartesian_state,timearray) # y = odeint(model, y0, t)
+        odestates = odeint(self.flatplate_equations,old_cartesian_state,timearray) # y = odeint(model, y0, t)
         new_cartesian_state = odestates[-1] # choose second state returned by odeint
+        if new_cartesian_state[2] > 0:
+            print('u is positive, the application has not been designed to be physically accurate in such cases')
         self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
        
+ 
         # compute reward and check if the episode is over (done)
         reward = self.compute_reward(old_polar_state, action, self.state)
         won, lost = self.is_won_or_lost(self.state)
@@ -92,8 +95,9 @@ class FlatPlate:
         if done:
             reward = self.update_reward_if_done(reward, won, lost)
 
+
         # save data for printing
-        self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.alpha/np.pi*180) + [reward]]
+        self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.pitch_angle/np.pi*180) + [reward]]
         
         return [self.state, reward, done, None]
 
@@ -108,7 +112,7 @@ class FlatPlate:
         self.var_episode = []
         if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
             self.update_B()
-
+        
         return self.state
 
 
@@ -128,23 +132,32 @@ class FlatPlate:
 
 
     # differential equations system for flat plate
-    def flatplate(self, cartesian_state, t):
+    def flatplate_equations(self, cartesian_state, t):
         u = cartesian_state[2]
         v = cartesian_state[3]
-        
-        V = np.sqrt(u**2+v**2)
-        alphainduced = np.arctan2(v,u)
-        # TO DO check
-        if alphainduced <= np.pi and alphainduced >= 0:
-            alphainduced = -(np.pi - np.abs(alphainduced))
-        else:
-            alphainduced = np.pi - np.abs(alphainduced)
+        V_norm = np.sqrt(u**2+v**2)
+
+        flight_path_angle = - np.arctan2(-v, -u)
+        alpha = self.pitch_angle - flight_path_angle
+        if alpha > np.pi/2:
+            print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
+
+        # Wang 2004 fitting
+        cl = 1.2 * np.sin(2*alpha)
+        cd = 1.4 - np.cos(2*alpha)
+
+        drag = self.mr * V_norm**2 * cd 
+        lift = self.mr * V_norm**2 * cl
         
         dxdt = u
         dydt = v
-        
-        dudt = self.Drag/self.m 
-        dvdt = self.g + self.mr * V**2 * (self.alpha + alphainduced) 
+       
+        # Andrea's equations 
+        #dudt = self.Drag/self.m 
+        #dvdt = self.g + self.mr * V_norm**2 * alpha
+
+        dudt = drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle)
+        dvdt = self.g + drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle)
         
         computedstate = np.array([dxdt, dydt, dudt, dvdt]).astype(float)
         return computedstate
@@ -187,6 +200,8 @@ class FlatPlate:
         return won, lost
 
 
+
+    # update B coordinates as required in the CFD config file
     def update_B(self):
         self.nb_pointB_change +=1
 
@@ -198,7 +213,7 @@ class FlatPlate:
             self.xB = np.random.uniform(self.xA, self.config["XB"])
             self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
 
-        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180)
+        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180, 'degrees')
         print('Final point coordinates: (',self.xB,self.yB,')')
 
         self.B = np.array([self.xB,self.yB])
