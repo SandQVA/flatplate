@@ -87,9 +87,13 @@ class FlatPlate:
             print('u is positive, the application has not been designed to be physically accurate in such cases')
         self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
         
+        #print('self.state normalized', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
+        denormalized_old_polar_state = self.denormalize_polar_state(old_polar_state)
+        denormalized_state = self.denormalize_polar_state(self.state)
+
         # compute reward and check if the episode is over (done)
-        reward = self.compute_reward(old_polar_state, action, self.state)
-        won, lost = self.is_won_or_lost(self.state)
+        reward = self.compute_reward(denormalized_old_polar_state, action, denormalized_state)
+        won, lost = self.is_won_or_lost(denormalized_state)
         done = self.isdone(won, lost)
         if done:
             reward = self.update_reward_if_done(reward, won, lost)
@@ -163,10 +167,14 @@ class FlatPlate:
 
     def compute_reward(self, old_polar_state, action, new_polar_state):
         delta_rho = new_polar_state[0] - old_polar_state[0]
-        delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
+        #delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
         #reward = -10000*delta_rho # go to goal
-        reward = (-100*delta_rho/self.rhoAB - 2*np.abs(new_polar_state[1])/np.pi)*10
-
+        #reward = (-100*delta_rho/self.rhoAB - 2*np.abs(new_polar_state[1])/np.pi)*10
+        reward_rho = -100*delta_rho/self.rhoAB
+        #reward_theta = -20*np.abs(new_polar_state[1])/np.pi
+        #reward = reward_rho + reward_theta
+        reward = reward_rho
+        #print('reward = reward rho + reward theta --> ', reward, ' = ', reward_rho, ' + ', reward_theta)
 
         return reward
 
@@ -249,15 +257,17 @@ class FlatPlate:
         rhoDot = u * np.cos(phiP) + v * np.sin(phiP)
         thetaDot = - u * np.sin(phiP) + v * np.cos(phiP)
         polar_state = np.array([rho, theta, rhoDot, thetaDot])
+        normalized_polar_state = self.normalize_polar_state(polar_state)
 
-        return polar_state
+        return normalized_polar_state
 
 
     def get_state_in_absolute_cartesian_coordinates(self, polar_state):
-        rho = polar_state[0]
-        theta = polar_state[1]
-        rhoDot = polar_state[2]
-        thetaDot = polar_state[3]
+        denormalized_polar_state = self.denormalize_polar_state(polar_state)
+        rho = denormalized_polar_state[0]
+        theta = denormalized_polar_state[1]
+        rhoDot = denormalized_polar_state[2]
+        thetaDot = denormalized_polar_state[3]
         phiP = theta + self.phiA
 
         x = self.xB + rho * np.cos(phiP)
@@ -268,6 +278,26 @@ class FlatPlate:
         cartesian_state = np.array([x, y, u, v])
 
         return cartesian_state
+
+
+    def normalize_polar_state(self, state):
+        normalized_state = np.zeros(4)
+        normalized_state[0] = state[0]/self.rhoAB
+        normalized_state[1] = state[1]/(np.pi/2)
+        normalized_state[2] = state[2]/(self.rhoAB*(self.uA/self.BA[0]))
+        normalized_state[3] = state[3]/((15*np.pi/180)/0.1)
+
+        return normalized_state
+
+
+    def denormalize_polar_state(self, state):
+        denormalized_state = np.zeros(4)
+        denormalized_state[0] = state[0]*self.rhoAB
+        denormalized_state[1] = state[1]*(np.pi/2)
+        denormalized_state[2] = state[2]*(self.rhoAB*(self.uA/self.BA[0]))
+        denormalized_state[3] = state[3]*((15*np.pi/180)/0.1)
+
+        return denormalized_state
 
 
     def fill_array_tobesaved(self):
