@@ -36,10 +36,9 @@ class FlatPlate:
 
         # some parameters
         self.threshold_angle = 10                             # threshold angle for B update
-        #self.Drag = 0                                        # drag forces (set to zero)
-        self.c = 0.1                                          # flat plate chord
-        self.L = 1                                            # flat plate length
-        self.t = 0.01                                         # flat plate thickness
+        self.c = config["CHORD"]                              # flat plate chord
+        self.L = config["LENGTH"]                             # flat plate length
+        self.t = config["THICKNESS"]                          # flat plate thickness
         self.S = self.c * self.L                              # flat plate surface
         self.rho_plate = 0.5 * 2                              # flat plate density (paper of 500g/m^2 density)
         self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass

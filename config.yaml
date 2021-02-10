@@ -64,3 +64,8 @@ YB : 0.036
 
 UA : -10.0
 VA : 0.5
+
+# flat plate dimensions
+CHORD : 0.01                                          # flat plate chord
+LENGTH : 0.01                                            # flat plate length
+THICKNESS : 0.01                                         # flat plate thickness
