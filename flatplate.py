@@ -362,8 +362,8 @@ class FlatPlate:
     def plot_testing_output(self, rewards, folder):
         # TODO optimize this to avoid recomputing everything
         score = sum(rewards)/len(rewards) if rewards else 0
-        xlast = np.trim_zeros(self.var_array[0,9,:], 'b')
-        ylast = self.var_array[1,9,:len(xlast)]
+        xlast = np.trim_zeros(self.var_array[0,0,:], 'b')
+        ylast = self.var_array[1,0,:len(xlast)]
 
         filex_train = f'{folder}/../x.csv'
         filey_train = f'{folder}/../y.csv'
