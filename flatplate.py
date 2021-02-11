@@ -35,7 +35,7 @@ class FlatPlate:
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
         # some parameters
-        self.threshold_angle = 10                             # threshold angle for B update
+        self.threshold_angle = 10                             # threshold angle for B update in degrees
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
@@ -143,9 +143,9 @@ class FlatPlate:
         if alpha > np.pi/2:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
-        # Wang 2004 fitting
-        cl = 1.2 * np.sin(2*alpha)
-        cd = 1.4 - np.cos(2*alpha)
+        # Wang 2004 fitting careful, Wang data are calibrated for angles in degrees
+        cl = 1.2 * np.sin(2*alpha*180/np.pi)
+        cd = 1.4 - np.cos(2*alpha*180/np.pi)
 
         drag = self.mr * V_norm**2 * cd 
         lift = self.mr * V_norm**2 * cl
@@ -170,9 +170,9 @@ class FlatPlate:
         #reward = -10000*delta_rho # go to goal
         #reward = (-100*delta_rho/self.rhoAB - 2*np.abs(new_polar_state[1])/np.pi)*10
         reward_rho = -100*delta_rho/self.rhoAB
-        #reward_theta = -20*np.abs(new_polar_state[1])/np.pi
-        #reward = reward_rho + reward_theta
-        reward = reward_rho
+        reward_theta = -20*np.abs(new_polar_state[1])/np.pi
+        reward = reward_rho + reward_theta
+        #reward = reward_rho
         #print('reward = reward rho + reward theta --> ', reward, ' = ', reward_rho, ' + ', reward_theta)
 
         return reward
@@ -226,7 +226,7 @@ class FlatPlate:
         self.xB = np.random.uniform(self.xA, self.config["XB"])
         self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
 
-        # keep iterating until the absolute angle between A and B is below 10 degrees
+        # keep iterating until the absolute angle between A and B is below the threshold angle
         while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle*np.pi/180:
             self.xB = np.random.uniform(self.xA, self.config["XB"])
             self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
