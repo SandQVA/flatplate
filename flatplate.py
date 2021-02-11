@@ -100,7 +100,7 @@ class FlatPlate:
         # save data for printing
         self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.pitch_angle/np.pi*180) + [reward]]
         
-        return [self.state, reward, done, None]
+        return [self.state.copy(), reward, done, None]
 
 
     def reset(self, state=None):
@@ -114,7 +114,7 @@ class FlatPlate:
         else:
             self.state = state
 
-        return self.state
+        return self.state.copy()
 
 
     # defined in order to mimic a gym environment
