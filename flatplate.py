@@ -36,6 +36,7 @@ class FlatPlate:
 
         # some parameters
         self.threshold_angle = 10                             # threshold angle for B update in degrees
+        self.max_pitch = 15
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
@@ -51,7 +52,7 @@ class FlatPlate:
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
 
         # attributs needed by the rl code or gym wrappers
-        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-15/180*np.pi, 15/180*np.pi, (1,))
+        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch/180*np.pi, self.max_pitch/180*np.pi, (1,))
         self.action_size = 1
         self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.cartesian_init.shape)
         self.reward_range = None
