@@ -43,7 +43,7 @@ class FlatPlate:
         self.rho_plate = 0.5 * 2                              # flat plate density (paper of 500g/m^2 density)
         self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
         self.rho_air = 1.18415
-        self.mr = (0.5 * self.rho_air * self.S) / self.m      # flat plate reduced mass
+        self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                       # gravity
         
         # state initialisation
@@ -144,8 +144,8 @@ class FlatPlate:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
         # Wang 2004 fitting careful, Wang data are calibrated for angles in degrees
-        cl = 1.2 * np.sin(2*alpha*180/np.pi)
-        cd = 1.4 - np.cos(2*alpha*180/np.pi)
+        cl = 1.2 * np.sin(2*alpha)
+        cd = 1.4 - np.cos(2*alpha)
 
         drag = self.mr * V_norm**2 * cd 
         lift = self.mr * V_norm**2 * cl
@@ -157,9 +157,9 @@ class FlatPlate:
         #dudt = self.Drag/self.m 
         #dvdt = self.g + self.mr * V_norm**2 * alpha
 
-        dudt = drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle)
-        dvdt = self.g + drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle)
-        
+        dudt = ( drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle) ) / self.m
+        dvdt = self.g + ( drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle) ) / self.m
+ 
         computedstate = np.array([dxdt, dydt, dudt, dvdt]).astype(float)
         return computedstate
 
