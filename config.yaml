@@ -14,7 +14,8 @@ TAU : 0.005                     # update parameter of the target network
 ACTION_SIGMA : 0.0                # additional noise (between chosen and actual action)
 
 MAX_EPISODES : 500               # number of training episodes
-MAX_STEPS : 350                 # max steps per episode
+MAX_STEPS : 150                 # max steps per episode
+RANDOM_EPISODES : 50            # number of random episodes
 
 # saving and plotting parameters
 FREQ_PLOT : 5
@@ -52,20 +53,20 @@ ALPHA_LR : 0.001
 #--------------------------------------------------------------------
 ############################ CFD config #############################
 #--------------------------------------------------------------------
-DELTA_TIME : 0.0005             # time step
+DELTA_TIME : 0.002             # time step
 POINTB_CHANGE : 200000          # change B every POINTB_CHANGE episodes
 
 # initial and target positions
 # B must be at most 10 deg from the horizontal axis with respect to A
-XA : 0.6
-YA : 0.035
-XB : 0.5
-YB : 0.036
+XA : 0.0
+YA : 0.0
+XB : -2.0
+YB : 0.0
 
 UA : -10.0
-VA : 0.5
+VA : 0.0
 
 # flat plate dimensions
-CHORD : 0.01                                          # flat plate chord
-LENGTH : 0.01                                            # flat plate length
+CHORD : 1.0                                          # flat plate chord
+LENGTH : 1.0                                            # flat plate length
 THICKNESS : 0.01                                         # flat plate thickness

@@ -36,14 +36,14 @@ class FlatPlate:
 
         # some parameters
         self.threshold_angle = 10                             # threshold angle for B update in degrees
-        self.max_pitch = 15
+        self.max_pitch = 15/180*np.pi
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
         self.S = self.c * self.L                              # flat plate surface
-        self.rho_plate = 0.5 * 2                              # flat plate density (paper of 500g/m^2 density)
+        self.rho_air = 1.0
+        self.rho_plate = self.rho_air * 200                    # flat plate density (paper of 500g/m^2 density)
         self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
-        self.rho_air = 1.18415
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                       # gravity
         
@@ -52,7 +52,7 @@ class FlatPlate:
         self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
 
         # attributs needed by the rl code or gym wrappers
-        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch/180*np.pi, self.max_pitch/180*np.pi, (1,))
+        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch, self.max_pitch, (1,))
         self.action_size = 1
         self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.cartesian_init.shape)
         self.reward_range = None
@@ -77,7 +77,8 @@ class FlatPlate:
     def step(self,action):
         old_polar_state = self.state
         self.pitch_angle = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
-        
+        #print('action', action)
+
         # solve differential equation
         timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
@@ -86,8 +87,8 @@ class FlatPlate:
         if new_cartesian_state[2] > 0:
             print('u is positive, the application has not been designed to be physically accurate in such cases')
         self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
-        
-        #print('self.state normalized', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
+        #print('self.state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
+
         denormalized_old_polar_state = self.denormalize_polar_state(old_polar_state)
         denormalized_state = self.denormalize_polar_state(self.state)
 
@@ -139,8 +140,8 @@ class FlatPlate:
         v = cartesian_state[3]
         V_norm = np.sqrt(u**2+v**2)
 
-        flight_path_angle = - np.arctan2(-v, -u)
-        alpha = self.pitch_angle - flight_path_angle
+        flight_path_angle = np.arctan2(-v, -u)
+        alpha = - self.pitch_angle + flight_path_angle
         if alpha > np.pi/2:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
@@ -150,7 +151,7 @@ class FlatPlate:
 
         drag = self.mr * V_norm**2 * cd 
         lift = self.mr * V_norm**2 * cl
-        
+
         dxdt = u
         dydt = v
        
@@ -173,7 +174,6 @@ class FlatPlate:
         reward_rho = -100*delta_rho/self.rhoAB
         reward_theta = -20*np.abs(new_polar_state[1])/np.pi
         reward = reward_rho + reward_theta
-        #reward = reward_rho
         #print('reward = reward rho + reward theta --> ', reward, ' = ', reward_rho, ' + ', reward_theta)
 
         return reward
@@ -198,7 +198,7 @@ class FlatPlate:
         won = False
         lost = False
 
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3):
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
             won = True
         elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
             lost = True
@@ -210,7 +210,7 @@ class FlatPlate:
         won = False
         lost = False
 
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-3):
+        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
             won = True
             print('won')
         elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
@@ -283,9 +283,9 @@ class FlatPlate:
     def normalize_polar_state(self, state):
         normalized_state = np.zeros(4)
         normalized_state[0] = state[0]/self.rhoAB
-        normalized_state[1] = state[1]/(np.pi/2)
-        normalized_state[2] = state[2]/(self.rhoAB*(self.uA/self.BA[0]))
-        normalized_state[3] = state[3]/((15*np.pi/180)/0.1)
+        normalized_state[1] = state[1]/(self.max_pitch/10.0)
+        normalized_state[2] = state[2]/np.sqrt(self.uA**2+self.vA**2)
+        normalized_state[3] = state[3]/(1./10.0)
 
         return normalized_state
 
@@ -293,9 +293,9 @@ class FlatPlate:
     def denormalize_polar_state(self, state):
         denormalized_state = np.zeros(4)
         denormalized_state[0] = state[0]*self.rhoAB
-        denormalized_state[1] = state[1]*(np.pi/2)
-        denormalized_state[2] = state[2]*(self.rhoAB*(self.uA/self.BA[0]))
-        denormalized_state[3] = state[3]*((15*np.pi/180)/0.1)
+        denormalized_state[1] = state[1]*(self.max_pitch/10.0)
+        denormalized_state[2] = state[2]*np.sqrt(self.uA**2+self.vA**2)
+        denormalized_state[3] = state[3]*(1./10.0)
 
         return denormalized_state
 
