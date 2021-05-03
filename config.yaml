@@ -7,24 +7,24 @@
 GAME : "flatplate"
 
 MEMORY_CAPACITY : 500000        # for the Replay Memory
-BATCH_SIZE : 64
+BATCH_SIZE : 512
 GAMMA : 0.99                    # discount factor
 TAU : 0.005                     # update parameter of the target network
 
-ACTION_SIGMA : 0.0                # additional noise (between chosen and actual action)
+ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
-MAX_EPISODES : 500               # number of training episodes
+MAX_EPISODES : 1000             # number of training episodes
 MAX_STEPS : 150                 # max steps per episode
 RANDOM_EPISODES : 50            # number of random episodes
 
 # saving and plotting parameters
-FREQ_PLOT : 5
-FREQ_EVAL : 10
+FREQ_PLOT : 10
+FREQ_EVAL : 1
 FREQ_SAVE : 100
 
 
 #-------------- parameters used only by DDPG and TD3 ----------------
-HIDDEN_LAYERS : [32, 32, 32]    # NN size
+HIDDEN_LAYERS : [32, 32]    # NN size
 LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
 
@@ -38,8 +38,8 @@ UPDATE_CLIP : 0.5
 
 
 #------------------- parameters used only by SAC --------------------
-HIDDEN_VALUE_LAYERS : [32, 32, 32]
-HIDDEN_Q_LAYERS : [32, 32, 32]
+HIDDEN_VALUE_LAYERS : [32, 32]
+HIDDEN_Q_LAYERS : [32, 32]
 HIDDEN_PI_LAYERS : [32, 32]
 
 VALUE_LR : 0.001
@@ -54,7 +54,7 @@ ALPHA_LR : 0.001
 ############################ CFD config #############################
 #--------------------------------------------------------------------
 DELTA_TIME : 0.002             # time step
-POINTB_CHANGE : 200000          # change B every POINTB_CHANGE episodes
+POINTB_CHANGE : 10000000          # change B every POINTB_CHANGE episodes
 
 # initial and target positions
 # B must be at most 10 deg from the horizontal axis with respect to A
@@ -65,6 +65,9 @@ YB : 0.0
 
 UA : -10.0
 VA : 0.0
+
+# max pitch angle in degrees
+MAX_PITCH : 60.0
 
 # flat plate dimensions
 CHORD : 1.0                                          # flat plate chord

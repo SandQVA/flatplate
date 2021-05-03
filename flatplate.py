@@ -35,8 +35,8 @@ class FlatPlate:
         self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
         # some parameters
-        self.threshold_angle = 10                             # threshold angle for B update in degrees
-        self.max_pitch = 15/180*np.pi
+        self.threshold_angle = 5/180*np.pi                    # threshold angle for B update in degrees
+        self.max_pitch = config["MAX_PITCH"]/180*np.pi
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
@@ -167,21 +167,29 @@ class FlatPlate:
 
 
     def compute_reward(self, old_polar_state, action, new_polar_state):
-        delta_rho = new_polar_state[0] - old_polar_state[0]
-        #delta_abs_theta = np.abs(new_polar_state[1]) - np.abs(old_polar_state[1])
-        #reward = -10000*delta_rho # go to goal
-        #reward = (-100*delta_rho/self.rhoAB - 2*np.abs(new_polar_state[1])/np.pi)*10
-        reward_rho = -100*delta_rho/self.rhoAB
-        reward_theta = -20*np.abs(new_polar_state[1])/np.pi
-        reward = reward_rho + reward_theta
+        if config["REWARD_TYPE"] == 'dense':
+            delta_rho = new_polar_state[0] - old_polar_state[0]
+            reward_rho = -100*delta_rho/self.rhoAB
+            reward_theta = -20*np.abs(new_polar_state[1])/np.pi
+            reward = reward_rho + reward_theta
+        elif config["REWARD_TYPE"] == 'sparse':
+            reward = 0.0
+        else:
+            print('!!! please define reward !!!')
         #print('reward = reward rho + reward theta --> ', reward, ' = ', reward_rho, ' + ', reward_theta)
 
         return reward
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if won: reward += 100
-        elif lost: reward += -100
+        if config["REWARD_TYPE"] == 'dense':
+            if won: reward += 10
+            elif lost: reward += -10
+        elif config["REWARD_TYPE"] == 'sparse':
+            if won: reward += 100
+            elif lost: reward += -100
+        else:
+            print('!!! please define reward !!!')
 
         return reward
 
@@ -228,7 +236,7 @@ class FlatPlate:
         self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
 
         # keep iterating until the absolute angle between A and B is below the threshold angle
-        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle*np.pi/180:
+        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle:
             self.xB = np.random.uniform(self.xA, self.config["XB"])
             self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
 
@@ -318,7 +326,7 @@ class FlatPlate:
         np.savetxt(filename, self.dt_array, delimiter=";")
 
 
-    def plot_training_output(self, rewards, folder):
+    def plot_training_output(self, returns, eval_returns, folder):
         # TODO optimize this to avoid recomputing everything
         xfirst = np.trim_zeros(self.var_array[0,0,:], 'b')
         yfirst = self.var_array[1,0,:len(xfirst)]
@@ -352,16 +360,18 @@ class FlatPlate:
         plt.legend(fontsize = 10, loc='best')
 
         plt.subplot(1,2,2)
-        plt.title('Training reward')
-        plt.plot(rewards, color='k')
+        plt.title('Training and evaluation returns')
+        plt.plot(returns, color='black', label='training')
+        plt.plot(eval_returns, color='red', label='evaluation')
         plt.grid()
         plt.xlabel('Episode', fontsize=14)
-        plt.ylabel('Reward', fontsize=14)
+        plt.ylabel('Return', fontsize=14)
+        plt.legend(loc=0)
         plt.savefig(f'{folder}/train_output.png')
 
-    def plot_testing_output(self, rewards, folder):
+    def plot_testing_output(self, returns, folder):
         # TODO optimize this to avoid recomputing everything
-        score = sum(rewards)/len(rewards) if rewards else 0
+        score = sum(returns)/len(returns) if returns else 0
         xlast = np.trim_zeros(self.var_array[0,0,:], 'b')
         ylast = self.var_array[1,0,:len(xlast)]
 
