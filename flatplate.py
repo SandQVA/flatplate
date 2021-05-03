@@ -167,12 +167,12 @@ class FlatPlate:
 
 
     def compute_reward(self, old_polar_state, action, new_polar_state):
-        if config["REWARD_TYPE"] == 'dense':
+        if self.config["REWARD_TYPE"] == 'dense':
             delta_rho = new_polar_state[0] - old_polar_state[0]
             reward_rho = -100*delta_rho/self.rhoAB
             reward_theta = -20*np.abs(new_polar_state[1])/np.pi
             reward = reward_rho + reward_theta
-        elif config["REWARD_TYPE"] == 'sparse':
+        elif self.config["REWARD_TYPE"] == 'sparse':
             reward = 0.0
         else:
             print('!!! please define reward !!!')
@@ -182,10 +182,10 @@ class FlatPlate:
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if config["REWARD_TYPE"] == 'dense':
+        if self.config["REWARD_TYPE"] == 'dense':
             if won: reward += 10
             elif lost: reward += -10
-        elif config["REWARD_TYPE"] == 'sparse':
+        elif self.config["REWARD_TYPE"] == 'sparse':
             if won: reward += 100
             elif lost: reward += -100
         else:
