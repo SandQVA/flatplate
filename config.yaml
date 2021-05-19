@@ -7,7 +7,7 @@
 GAME : "flatplate"
 
 MEMORY_CAPACITY : 500000        # for the Replay Memory
-BATCH_SIZE : 512
+BATCH_SIZE : 256
 GAMMA : 0.99                    # discount factor
 TAU : 0.005                     # update parameter of the target network
 
@@ -21,6 +21,15 @@ RANDOM_EPISODES : 50            # number of random episodes
 FREQ_PLOT : 10
 FREQ_EVAL : 1
 FREQ_SAVE : 100
+
+
+#----- parameters common to DDPG, TD3 and SAC for LaBER and PER -----
+LaBER : False                   # if set to true LaBER is applied
+LaBER_SLEEK : False             # if set to True LaBER sleek otherwise classical LaBER
+M : 4                           # size reduction from large to mini-batch
+                                # if LaBER is True, BATCH_SIZE defines the large batch size
+PER : False                     # if set to true PER is applied
+PER_OLD_PHILO : False           # if set to true PER_OLD_PHILO is applied
 
 
 #-------------- parameters used only by DDPG and TD3 ----------------
@@ -67,7 +76,7 @@ UA : -10.0
 VA : 0.0
 
 # some parameters for the control problem
-MAX_PITCH : 60.0
+MAX_PITCH : 15.0
 REWARD_TYPE : "dense" #choose between dense and sparse
 
 # flat plate dimensions
