@@ -326,7 +326,7 @@ class FlatPlate:
         np.savetxt(filename, self.dt_array, delimiter=";")
 
 
-    def plot_training_output(self, returns, eval_returns, folder):
+    def plot_training_output(self, returns, eval_returns, freq_eval, folder):
         # TODO optimize this to avoid recomputing everything
         xfirst = np.trim_zeros(self.var_array[0,0,:], 'b')
         yfirst = self.var_array[1,0,:len(xfirst)]
@@ -342,6 +342,8 @@ class FlatPlate:
         worst = np.argmin(cumulative_reward)
         xworst = np.trim_zeros(self.var_array[0,worst,:], 'b')
         yworst = self.var_array[1,worst,:len(xworst)]
+
+        ep_eval = [i*freq_eval for i in range(1, len(eval_returns)+1)]
 
         plt.cla()
         plt.figure(figsize=(10, 5))
@@ -362,7 +364,7 @@ class FlatPlate:
         plt.subplot(1,2,2)
         plt.title('Training and evaluation returns')
         plt.plot(returns, color='black', label='training')
-        plt.plot(eval_returns, color='red', label='evaluation')
+        plt.plot(ep_eval, eval_returns, color='red', label='evaluation')
         plt.grid()
         plt.xlabel('Episode', fontsize=14)
         plt.ylabel('Return', fontsize=14)
