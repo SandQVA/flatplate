@@ -13,7 +13,7 @@ TAU : 0.005                     # update parameter of the target network
 
 ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
-MAX_EPISODES : 1000             # number of training episodes
+MAX_EPISODES : 10             # number of training episodes
 MAX_STEPS : 150                 # max steps per episode
 RANDOM_EPISODES : 50            # number of random episodes
 
@@ -63,17 +63,19 @@ ALPHA_LR : 0.001
 ############################ CFD config #############################
 #--------------------------------------------------------------------
 DELTA_TIME : 0.002             # time step
-POINTB_CHANGE : 10000000          # change B every POINTB_CHANGE episodes
 
-# initial and target positions
-# B must be at most 10 deg from the horizontal axis with respect to A
+# initial position
 XA : 0.0
 YA : 0.0
-XB : -2.0
-YB : 0.0
-
 UA : -10.0
 VA : 0.0
+
+# target position definition
+BTYPE : "fixed"
+DISTANCE_RANGE : [0.01, 0.02]
+ANGLE_RANGE : [-15., 15.]
+XB : -0.02
+YB : 0.002
 
 # some parameters for the control problem
 MAX_PITCH : 15.0

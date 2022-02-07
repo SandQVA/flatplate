@@ -20,20 +20,18 @@ class FlatPlate:
         self.config = config
        
         # initial and target conditions from config file
-        self.xA = config["XA"]
-        self.yA = config["YA"]
-        self.A = np.array([self.xA,self.yA])
+        self.xA = 0.
+        self.yA = 0.
         self.uA = config["UA"]
         self.vA = config["VA"]
-        self.xB = config["XB"]
-        self.yB = config["YB"] 
+        self.xB = 0.
+        self.yB = 0. 
         self.B = np.array([self.xB,self.yB])
-        self.rhoAB = np.linalg.norm(self.A-self.B)
-        self.diffyAB_init = abs(self.yA-self.yB)
-
-        self.BA = self.A-self.B
+        self.rhoAB = 0.
 
         # some parameters
+        self.nb_ep = 0
+        self.B_array = []
         self.threshold_angle = 5/180*np.pi                    # threshold angle for B update in degrees
         self.max_pitch = config["MAX_PITCH"]/180*np.pi
         self.c = config["CHORD"]                              # flat plate chord
@@ -48,29 +46,20 @@ class FlatPlate:
         
         # state initialisation
         self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
-        self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
+        self.state = np.zeros(self.cartesian_init.shape)
 
         # attributs needed by the rl code or gym wrappers
         self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch, self.max_pitch, (1,))
         self.action_size = 1
-        self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.cartesian_init.shape)
+        self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.state.shape)
         self.reward_range = None
         self.metadata = None
-
-        # B coords array (size depending on update number)
-        self.nb_ep = 0
-        self.nb_pointB_change = 0
-        self.B_array = np.zeros([self.config["MAX_EPISODES"]//self.config["POINTB_CHANGE"]+1, 2])
-        self.B_array[self.nb_pointB_change, :] = self.B
 
         # dt_array and var_array initialisation (for plotting purposes only, not required by the application)    
         self.var_episode = [0]
         self.variables = ['x', 'y', 'u', 'v', 'actions', 'rewards']
         self.dt_array = np.array([i*config["DELTA_TIME"] for i in range(config["MAX_STEPS"]+1)])
         self.var_array = np.zeros([len(self.variables), config["MAX_EPISODES"],config["MAX_STEPS"]+1])
-        # fill array with initial state
-        for i in range(len(self.cartesian_init)):
-            self.var_array[i,:,0] = self.cartesian_init[i]
 
  
     def step(self,action):
@@ -104,17 +93,38 @@ class FlatPlate:
         return [self.state.copy(), reward, done, None]
 
 
-    def reset(self, state=None):
+    def reset(self, Btype='random'):
         self.nb_ep +=1
         self.var_episode = []
-        if np.mod(self.nb_ep,self.config["POINTB_CHANGE"]) == 0:
-            self.update_B()
+        print('Btype = ', Btype)
 
-        if state==None:
-            self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
-        else:
-            self.state = state
+        # B is fixed, values are given in the config file 
+        if Btype=='fixed':
+            if self.nb_ep==1:
+                self.xB = self.config["XB"]
+                self.yB = self.config["YB"]
+                self.B = np.array([self.xB,self.yB])
+                self.B_array.append(self.B)
+                A = np.array([self.xA,self.yA])
+                self.rhoAB = np.linalg.norm(A-self.B)
 
+        # B is set randomly (in a given range) at each episode
+        elif Btype=='random':
+            self.update_B_random()
+            self.B = np.array([self.xB,self.yB])
+            self.B_array.append(self.B)
+
+        # a fixed set of B positions is used
+        elif Btype=='batch':
+            print('not yet coded')
+            quit()
+
+        # define initial state according to the position of B
+        self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
+        # fill array with initial state
+        for i in range(len(self.cartesian_init)):
+            self.var_array[i,:,0] = self.cartesian_init[i]
+        
         return self.state.copy()
 
 
@@ -228,25 +238,14 @@ class FlatPlate:
 
 
     # update B coordinates as required in the CFD config file
-    def update_B(self):
-        self.nb_pointB_change +=1
+    def update_B_random(self):
+        env_angle_range = np.array(self.config["ANGLE_RANGE"])/180*np.pi
+        env_distance_range = np.array(self.config["DISTANCE_RANGE"])
+        thetaA = -np.random.uniform(env_angle_range[0], env_angle_range[1])
+        self.rhoAB = np.random.uniform(env_distance_range[0], env_distance_range[1])
 
-        self.xB = np.random.uniform(self.xA, self.config["XB"])
-        self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
-
-        # keep iterating until the absolute angle between A and B is below the threshold angle
-        while abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA))) > self.threshold_angle:
-            self.xB = np.random.uniform(self.xA, self.config["XB"])
-            self.yB = np.random.uniform(self.yA-self.diffyAB_init, self.yA+self.diffyAB_init)
-
-        print('Final absolute angle',abs(np.arctan2(abs(self.yB-self.yA),abs(self.xB-self.xA)))/np.pi*180, 'degrees')
-        print('Final point coordinates: (',self.xB,self.yB,')')
-
-        self.B = np.array([self.xB,self.yB])
-        self.rhoAB = np.linalg.norm(self.A-self.B)
-        self.BA = self.A-self.B
-        
-        self.B_array[self.nb_pointB_change, :] = self.B 
+        self.xB = self.rhoAB * np.cos(np.pi+thetaA)
+        self.yB = self.rhoAB * np.sin(np.pi+thetaA)
 
 
 # Below are only utility functions ------------------------------------------
@@ -323,9 +322,6 @@ class FlatPlate:
 
 
     def plot_training_output(self, returns, eval_returns, freq_eval, folder):
-        # TODO optimize this to avoid recomputing everything
-        xfirst = np.trim_zeros(self.var_array[0,0,:], 'b')
-        yfirst = self.var_array[1,0,:len(xfirst)]
         xlast = np.trim_zeros(self.var_array[0,-1,:], 'b')
         ylast = self.var_array[1,-1,:len(xlast)] 
 
@@ -334,30 +330,29 @@ class FlatPlate:
         best = np.argmax(cumulative_reward)
         xbest = np.trim_zeros(self.var_array[0,best,:], 'b')
         ybest = self.var_array[1,best,:len(xbest)]
-
-        worst = np.argmin(cumulative_reward)
-        xworst = np.trim_zeros(self.var_array[0,worst,:], 'b')
-        yworst = self.var_array[1,worst,:len(xworst)]
+        if len(self.B_array) == 1:
+            Bbest = self.B_array[0]
+        else: 
+            Bbest = self.B_array[best]
 
         ep_eval = [i*freq_eval for i in range(1, len(eval_returns)+1)]
 
         plt.cla()
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(14, 5))
         plt.tight_layout()
         plt.suptitle(folder.rsplit('/', 1)[1])
-        plt.subplot(1,2,1)
+        plt.subplot(1,3,2)
         plt.title('Trajectories')
-        plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
-        plt.plot(xfirst, yfirst, label='first path')
-        plt.plot(xlast, ylast, label='last path ep='+str(self.config['MAX_EPISODES']))
-        plt.plot(xbest, ybest, label='best path ep='+str(best))
-        plt.plot(xworst, yworst, label='worst path ep='+str(worst))
+        plt.plot([self.xA, self.xB], [self.yA, self.yB], color='black', ls='--', label='Ideal path')
+        plt.plot(xlast, ylast, color='black', label='last path ep='+str(self.config['MAX_EPISODES']))
+        plt.plot([self.xA, Bbest[0]], [self.yA, Bbest[1]], color='green', ls='--', label='Ideal path')
+        plt.plot(xbest, ybest, color='green', label='best path ep='+str(best))
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
         plt.legend(fontsize = 10, loc='best')
 
-        plt.subplot(1,2,2)
+        plt.subplot(1,3,1)
         plt.title('Training and evaluation returns')
         plt.plot(returns, color='black', label='training')
         plt.plot(ep_eval, eval_returns, color='red', label='evaluation')
@@ -365,53 +360,53 @@ class FlatPlate:
         plt.xlabel('Episode', fontsize=14)
         plt.ylabel('Return', fontsize=14)
         plt.legend(loc=0)
+
+        plt.subplot(1,3,3)
+        plt.plot(np.transpose(self.B_array)[0], np.transpose(self.B_array)[1], '.', color='blue')
+        plt.scatter(self.xA, self.yA, 150, color='black', zorder=1.0)
+        plt.gca().set_aspect('equal', adjustable='box')
         plt.savefig(f'{folder}/train_output.png')
 
+
     def plot_testing_output(self, returns, folder):
-        # TODO optimize this to avoid recomputing everything
         score = sum(returns)/len(returns) if returns else 0
         xlast = np.trim_zeros(self.var_array[0,0,:], 'b')
         ylast = self.var_array[1,0,:len(xlast)]
 
-        filex_train = f'{folder}/../x.csv'
-        filey_train = f'{folder}/../y.csv'
-        filereward_train = f'{folder}/../rewards.csv'
-        xmatrix_train = np.loadtxt(filex_train, delimiter=";")
-        ymatrix_train = np.loadtxt(filey_train, delimiter=";")
-        rewardmatrix_train = np.loadtxt(filereward_train, delimiter=";")
-        xlasttrain = np.trim_zeros(xmatrix_train[-1,:], 'b')
-        ylasttrain = ymatrix_train[-1,:len(xlasttrain)]
-
-        cumulative_reward = rewardmatrix_train.sum(axis=1)
-
         plt.cla()
         plt.figure(figsize=(10, 5))
         plt.suptitle(folder.rsplit('/', 2)[1])
-        plt.subplot(1,2,1)
-        plt.plot([self.xA,self.xB], [self.yA,self.yB], color='black', ls='--', label='Ideal path')
-        plt.plot(xlasttrain, ylasttrain, label='last training path')
-        plt.plot(xlast, ylast, label='test path')
+        plt.subplots_adjust(left=0.08, bottom=0.1, right=0.95, top=0.90, hspace = 0.6)
+
+        plt.subplot(1,3,1)
+        plt.title('Testing return for each episode')
+        plt.plot(returns, 'o-', color='black', label='training')
+        plt.grid()
+        plt.xlabel('Episode', fontsize=14)
+        plt.ylabel('Return', fontsize=14)
+
+        plt.subplot(1,3,2)
+        n_cmap = len(returns)
+        cmap = pl.cm.tab10(np.linspace(0,1,n_cmap))
+
+        if len(self.B_array) == 1:
+            plt.plot([self.xA,self.B_array[0][0]], [self.yA,self.B_array[0][1]], color='black', ls='--', label='Ideal path')
+        else:
+            for i in range(len(returns)):
+                plt.plot([self.xA,self.B_array[i][0]], [self.yA,self.B_array[i][1]], color=cmap[i], ls='--', label='Ideal path')
+        
+        for i in range(len(returns)):
+            x = np.trim_zeros(self.var_array[0,i,:], 'b')
+            y = self.var_array[1,i,:len(x)]
+            plt.plot(x,y, color=cmap[i], label='test path')
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
-        plt.legend(fontsize = 10, loc='best')
+        #plt.legend(fontsize = 10, loc='best')
 
-        t='Rewards \n'+\
-          f"   Test         = {score:9.0f}\n"+\
-          f"   Train (last) = {cumulative_reward[-1]:9.0f}"
-
-        left, width = .25, .5
-        bottom, height = .25, .5
-        right = left + width
-        top = bottom + height
-
-        ax = plt.subplot(1,2,2)
-        ax.axis('off')
-        ax.text(0.5*(left+right), 0.5*(bottom+top), t,
-                horizontalalignment='center',
-                verticalalignment='center',
-                transform=ax.transAxes,
-                color='k',
-                fontsize=12)
+        plt.subplot(1,3,3)
+        plt.plot(np.transpose(self.B_array[:len(returns)])[0], np.transpose(self.B_array[:len(returns)])[1], '.', color='blue')
+        plt.scatter(self.xA, self.yA, 150, color='black', zorder=1.0)
+        plt.gca().set_aspect('equal', adjustable='box')
 
         plt.savefig(f'{folder}/test_output.png')
