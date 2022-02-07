@@ -13,9 +13,9 @@ TAU : 0.005                     # update parameter of the target network
 
 ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
-MAX_EPISODES : 10             # number of training episodes
+MAX_EPISODES : 10               # number of training episodes
 MAX_STEPS : 150                 # max steps per episode
-RANDOM_EPISODES : 50            # number of random episodes
+PRE_FILL_EPISODES : 50          # number of pre-filling episodes
 
 # saving and plotting parameters
 FREQ_PLOT : 10
@@ -33,7 +33,7 @@ PER_OLD_PHILO : False           # if set to true PER_OLD_PHILO is applied
 
 
 #-------------- parameters used only by DDPG and TD3 ----------------
-HIDDEN_LAYERS : [32, 32]    # NN size
+HIDDEN_LAYERS : [32, 32]        # NN size
 LEARNING_RATE_CRITIC : 0.001
 LEARNING_RATE_ACTOR : 0.001
 
