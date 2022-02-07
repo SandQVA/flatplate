@@ -32,7 +32,6 @@ class FlatPlate:
         self.diffyAB_init = abs(self.yA-self.yB)
 
         self.BA = self.A-self.B
-        self.phiA = np.arctan2(self.BA[1],self.BA[0])
 
         # some parameters
         self.threshold_angle = 5/180*np.pi                    # threshold angle for B update in degrees
@@ -208,7 +207,7 @@ class FlatPlate:
 
         if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
             won = True
-        elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
+        elif np.abs(polar_state[1]) >= np.pi/2.:
             lost = True
 
         return won, lost
@@ -221,7 +220,7 @@ class FlatPlate:
         if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
             won = True
             print('won')
-        elif np.abs(polar_state[1]+self.phiA) >= np.pi/2.:
+        elif np.abs(polar_state[1]) >= np.pi/2.:
             lost = True
             print('lost')
 
@@ -246,7 +245,6 @@ class FlatPlate:
         self.B = np.array([self.xB,self.yB])
         self.rhoAB = np.linalg.norm(self.A-self.B)
         self.BA = self.A-self.B
-        self.phiA = np.arctan2(self.BA[1],self.BA[0])
         
         self.B_array[self.nb_pointB_change, :] = self.B 
 
@@ -256,14 +254,13 @@ class FlatPlate:
     def get_state_in_relative_polar_coordinates(self, cartesian_state):
         BP = cartesian_state[0:2]-self.B
         rho = np.linalg.norm(BP)
-        phiP = np.arctan2(BP[1],BP[0])
-        theta = phiP - self.phiA
+        theta = np.arctan2(BP[1],BP[0])
 
         u = cartesian_state[2]
         v = cartesian_state[3]
 
-        rhoDot = u * np.cos(phiP) + v * np.sin(phiP)
-        thetaDot = - u * np.sin(phiP) + v * np.cos(phiP)
+        rhoDot = u * np.cos(theta) + v * np.sin(theta)
+        thetaDot = - u * np.sin(theta) + v * np.cos(theta)
         polar_state = np.array([rho, theta, rhoDot, thetaDot])
         normalized_polar_state = self.normalize_polar_state(polar_state)
 
@@ -276,13 +273,12 @@ class FlatPlate:
         theta = denormalized_polar_state[1]
         rhoDot = denormalized_polar_state[2]
         thetaDot = denormalized_polar_state[3]
-        phiP = theta + self.phiA
 
-        x = self.xB + rho * np.cos(phiP)
-        y = self.yB + rho * np.sin(phiP)
+        x = self.xB + rho * np.cos(theta)
+        y = self.yB + rho * np.sin(theta)
 
-        u = rhoDot * np.cos(phiP) - thetaDot * np.sin(phiP)
-        v = rhoDot * np.sin(phiP) + thetaDot * np.cos(phiP)
+        u = rhoDot * np.cos(theta) - thetaDot * np.sin(theta)
+        v = rhoDot * np.sin(theta) + thetaDot * np.cos(theta)
         cartesian_state = np.array([x, y, u, v])
 
         return cartesian_state
