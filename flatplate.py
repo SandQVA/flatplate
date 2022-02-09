@@ -11,6 +11,7 @@ import collections
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pl
 
 
 class FlatPlate:
@@ -32,21 +33,22 @@ class FlatPlate:
         # some parameters
         self.nb_ep = 0
         self.B_array = []
-        self.threshold_angle = 5/180*np.pi                    # threshold angle for B update in degrees
+        self.done = False
         self.max_pitch = config["MAX_PITCH"]/180*np.pi
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
         self.S = self.c * self.L                              # flat plate surface
         self.rho_air = 1.0
-        self.rho_plate = self.rho_air * 200                    # flat plate density (paper of 500g/m^2 density)
-        self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
+        #self.rho_plate = self.rho_air * 200                   # flat plate density (paper of 500g/m^2 density)
+        #self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
+        self.m = 4.86745e-7
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                       # gravity
         
         # state initialisation
-        self.cartesian_init = np.array([self.xA,self.yA, self.uA, self.vA])
-        self.state = np.zeros(self.cartesian_init.shape)
+        self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])
+        self.state = np.zeros(5)
 
         # attributs needed by the rl code or gym wrappers
         self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch, self.max_pitch, (1,))
@@ -74,18 +76,18 @@ class FlatPlate:
         new_cartesian_state = odestates[-1] # choose second state returned by odeint
         if new_cartesian_state[2] > 0:
             print('u is positive, the application has not been designed to be physically accurate in such cases')
-        self.state = self.get_state_in_relative_polar_coordinates(new_cartesian_state)
+            self.done = True
+        self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state)
         #print('self.state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
-
-        denormalized_old_polar_state = self.denormalize_polar_state(old_polar_state)
-        denormalized_state = self.denormalize_polar_state(self.state)
-
+ 
         # compute reward and check if the episode is over (done)
-        reward = self.compute_reward(denormalized_old_polar_state, action, denormalized_state)
-        won, lost = self.is_won_or_lost(denormalized_state)
-        done = self.isdone(won, lost)
-        if done:
+        reward = self.compute_reward(old_polar_state, self.state)
+        won, lost = self.is_won_or_lost(self.state)
+        if won or lost:
+            self.done = True
+        if self.done:
             reward = self.update_reward_if_done(reward, won, lost)
+        done = self.done
 
         # save data for printing
         self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.pitch_angle/np.pi*180) + [reward]]
@@ -96,6 +98,8 @@ class FlatPlate:
     def reset(self, Btype='random'):
         self.nb_ep +=1
         self.var_episode = []
+        self.done = False
+
         print('Btype = ', Btype)
 
         # B is fixed, values are given in the config file 
@@ -120,7 +124,7 @@ class FlatPlate:
             quit()
 
         # define initial state according to the position of B
-        self.state = self.get_state_in_relative_polar_coordinates(self.cartesian_init)
+        self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init)
         # fill array with initial state
         for i in range(len(self.cartesian_init)):
             self.var_array[i,:,0] = self.cartesian_init[i]
@@ -175,17 +179,14 @@ class FlatPlate:
         return computedstate
 
 
-    def compute_reward(self, old_polar_state, action, new_polar_state):
+    def compute_reward(self, old_polar_state, new_polar_state):
         if self.config["REWARD_TYPE"] == 'dense':
             delta_rho = new_polar_state[0] - old_polar_state[0]
-            reward_rho = -100*delta_rho/self.rhoAB
-            reward_theta = -20*np.abs(new_polar_state[1])/np.pi
-            reward = reward_rho + reward_theta
+            reward = -100*delta_rho
         elif self.config["REWARD_TYPE"] == 'sparse':
             reward = 0.0
         else:
             print('!!! please define reward !!!')
-        #print('reward = reward rho + reward theta --> ', reward, ' = ', reward_rho, ' + ', reward_theta)
 
         return reward
 
@@ -203,21 +204,13 @@ class FlatPlate:
         return reward
 
     
-    def isdone(self, won, lost):
-        done = False
-        if won or lost:
-            done = True
-
-        return done
-    
-
     def is_won_or_lost(self, polar_state):
         won = False
         lost = False
 
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
+        if np.abs(polar_state[0]) <= 10**(-2):
             won = True
-        elif np.abs(polar_state[1]) >= np.pi/2.:
+        elif polar_state[2] <= 0.:
             lost = True
 
         return won, lost
@@ -227,10 +220,10 @@ class FlatPlate:
         won = False
         lost = False
 
-        if np.abs(polar_state[0]/self.rhoAB) <= 10**(-2):
+        if np.abs(polar_state[0]) <= 10**(-2):
             won = True
             print('won')
-        elif np.abs(polar_state[1]) >= np.pi/2.:
+        elif polar_state[2] <= 0.:
             lost = True
             print('lost')
 
@@ -250,7 +243,7 @@ class FlatPlate:
 
 # Below are only utility functions ------------------------------------------
 
-    def get_state_in_relative_polar_coordinates(self, cartesian_state):
+    def get_state_in_normalized_polar_coordinates(self, cartesian_state):
         BP = cartesian_state[0:2]-self.B
         rho = np.linalg.norm(BP)
         theta = np.arctan2(BP[1],BP[0])
@@ -260,8 +253,9 @@ class FlatPlate:
 
         rhoDot = u * np.cos(theta) + v * np.sin(theta)
         thetaDot = - u * np.sin(theta) + v * np.cos(theta)
-        polar_state = np.array([rho, theta, rhoDot, thetaDot])
+        polar_state = np.array([rho, np.sin(theta), np.cos(theta), rhoDot, thetaDot])
         normalized_polar_state = self.normalize_polar_state(polar_state)
+        print('n_p_s ', ["{:0.4f}".format(x) for x in normalized_polar_state])
 
         return normalized_polar_state
 
@@ -269,9 +263,12 @@ class FlatPlate:
     def get_state_in_absolute_cartesian_coordinates(self, polar_state):
         denormalized_polar_state = self.denormalize_polar_state(polar_state)
         rho = denormalized_polar_state[0]
-        theta = denormalized_polar_state[1]
-        rhoDot = denormalized_polar_state[2]
-        thetaDot = denormalized_polar_state[3]
+        sintheta = denormalized_polar_state[1]
+        costheta = denormalized_polar_state[2]
+        theta = np.arccos(costheta) * np.sign(sintheta)
+        
+        rhoDot = denormalized_polar_state[3]
+        thetaDot = denormalized_polar_state[4]
 
         x = self.xB + rho * np.cos(theta)
         y = self.yB + rho * np.sin(theta)
@@ -284,21 +281,23 @@ class FlatPlate:
 
 
     def normalize_polar_state(self, state):
-        normalized_state = np.zeros(4)
+        normalized_state = np.zeros(5)
         normalized_state[0] = state[0]/self.rhoAB
-        normalized_state[1] = state[1]/(self.max_pitch/10.0)
-        normalized_state[2] = state[2]/np.sqrt(self.uA**2+self.vA**2)
-        normalized_state[3] = state[3]/(1./10.0)
+        normalized_state[1] = state[1]
+        normalized_state[2] = state[2]
+        normalized_state[3] = state[3]/np.sqrt(self.uA**2+self.vA**2)
+        normalized_state[4] = state[4]/10
 
         return normalized_state
 
 
     def denormalize_polar_state(self, state):
-        denormalized_state = np.zeros(4)
+        denormalized_state = np.zeros(5)
         denormalized_state[0] = state[0]*self.rhoAB
-        denormalized_state[1] = state[1]*(self.max_pitch/10.0)
-        denormalized_state[2] = state[2]*np.sqrt(self.uA**2+self.vA**2)
-        denormalized_state[3] = state[3]*(1./10.0)
+        denormalized_state[1] = state[1]
+        denormalized_state[2] = state[2]
+        denormalized_state[3] = state[3]*np.sqrt(self.uA**2+self.vA**2)
+        denormalized_state[4] = state[4]*10
 
         return denormalized_state
 
@@ -348,6 +347,7 @@ class FlatPlate:
         plt.plot([self.xA, Bbest[0]], [self.yA, Bbest[1]], color='green', ls='--', label='Ideal path')
         plt.plot(xbest, ybest, color='green', label='best path ep='+str(best))
         plt.grid()
+        plt.axis('equal')
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
         plt.legend(fontsize = 10, loc='best')

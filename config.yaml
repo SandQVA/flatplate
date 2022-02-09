@@ -13,13 +13,13 @@ TAU : 0.005                     # update parameter of the target network
 
 ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
-MAX_EPISODES : 10               # number of training episodes
-MAX_STEPS : 150                 # max steps per episode
-PRE_FILL_EPISODES : 50          # number of pre-filling episodes
+MAX_EPISODES : 500               # number of training episodes
+MAX_STEPS : 300                 # max steps per episode
+PRE_FILL_EPISODES : 2          # number of pre-filling episodes
 
 # saving and plotting parameters
 FREQ_PLOT : 10
-FREQ_EVAL : 1
+FREQ_EVAL : 10
 FREQ_SAVE : 100
 
 
@@ -62,7 +62,7 @@ ALPHA_LR : 0.001
 #--------------------------------------------------------------------
 ############################ CFD config #############################
 #--------------------------------------------------------------------
-DELTA_TIME : 0.002             # time step
+DELTA_TIME : 0.00002             # time step
 
 # initial position
 XA : 0.0
@@ -78,10 +78,10 @@ XB : -0.02
 YB : 0.002
 
 # some parameters for the control problem
-MAX_PITCH : 15.0
+MAX_PITCH : 40.0
 REWARD_TYPE : "dense" #choose between dense and sparse
 
 # flat plate dimensions
-CHORD : 1.0                                          # flat plate chord
-LENGTH : 1.0                                            # flat plate length
-THICKNESS : 0.01                                         # flat plate thickness
+CHORD : 0.01                                          # flat plate chord
+LENGTH : 0.01                                            # flat plate length
+THICKNESS : 0.0002                                         # flat plate thickness
