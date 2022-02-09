@@ -159,8 +159,12 @@ class FlatPlate:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
         # Wang 2004 fitting careful, Wang data are calibrated for angles in degrees
-        cl = 1.2 * np.sin(2*alpha)
-        cd = 1.4 - np.cos(2*alpha)
+        #cl = 1.2 * np.sin(2*alpha)
+        #cd = 1.4 - np.cos(2*alpha)
+
+        # Valeurs Thierry
+        cl = 1.3433 * np.sin(2*alpha)
+        cd = 1.5055 - 1.3509 * np.cos(2*alpha)
 
         drag = self.mr * V_norm**2 * cd 
         lift = self.mr * V_norm**2 * cl
@@ -168,10 +172,6 @@ class FlatPlate:
         dxdt = u
         dydt = v
        
-        # Andrea's equations 
-        #dudt = self.Drag/self.m 
-        #dvdt = self.g + self.mr * V_norm**2 * alpha
-
         dudt = ( drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle) ) / self.m
         dvdt = self.g + ( drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle) ) / self.m
  
