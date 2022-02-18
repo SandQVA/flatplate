@@ -78,7 +78,7 @@ XB : -0.02
 YB : 0.002
 
 # some parameters for the control problem
-MAX_PITCH : 40.0
+MAX_PITCH_RATE : 800
 REWARD_TYPE : "dense" #choose between dense and sparse
 
 # flat plate dimensions

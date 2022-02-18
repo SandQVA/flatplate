@@ -34,7 +34,9 @@ class FlatPlate:
         self.nb_ep = 0
         self.B_array = []
         self.done = False
-        self.max_pitch = config["MAX_PITCH"]/180*np.pi
+        self.pitch_angle = 0.
+        self.pitch_rate = 0.
+        self.max_pitch_rate = config["MAX_PITCH_RATE"]
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
@@ -51,7 +53,7 @@ class FlatPlate:
         self.state = np.zeros(5)
 
         # attributs needed by the rl code or gym wrappers
-        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch, self.max_pitch, (1,))
+        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch_rate, self.max_pitch_rate, (1,))
         self.action_size = 1
         self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.state.shape)
         self.reward_range = None
@@ -66,7 +68,8 @@ class FlatPlate:
  
     def step(self,action):
         old_polar_state = self.state
-        self.pitch_angle = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+        self.pitch_rate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+        self.pitch_angle = self.pitch_angle + self.pitch_rate * self.config["DELTA_TIME"]
         #print('action', action)
 
         # solve differential equation
@@ -75,7 +78,7 @@ class FlatPlate:
         odestates = odeint(self.flatplate_equations,old_cartesian_state,timearray) # y = odeint(model, y0, t)
         new_cartesian_state = odestates[-1] # choose second state returned by odeint
         if new_cartesian_state[2] > 0:
-            print('u is positive, the application has not been designed to be physically accurate in such cases')
+            print('u is positive')
             self.done = True
         self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state)
         #print('self.state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
@@ -90,7 +93,7 @@ class FlatPlate:
         done = self.done
 
         # save data for printing
-        self.var_episode = self.var_episode + [list(new_cartesian_state) + list(self.pitch_angle/np.pi*180) + [reward]]
+        self.var_episode = self.var_episode + [list(new_cartesian_state) + [action] + [reward]]
         
         return [self.state.copy(), reward, done, None]
 
@@ -99,8 +102,7 @@ class FlatPlate:
         self.nb_ep +=1
         self.var_episode = []
         self.done = False
-
-        print('Btype = ', Btype)
+        self.pitch_angle = 0.
 
         # B is fixed, values are given in the config file 
         if Btype=='fixed':
@@ -158,11 +160,6 @@ class FlatPlate:
         if alpha > np.pi/2:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
-        # Wang 2004 fitting careful, Wang data are calibrated for angles in degrees
-        #cl = 1.2 * np.sin(2*alpha)
-        #cd = 1.4 - np.cos(2*alpha)
-
-        # Valeurs Thierry
         cl = 1.3433 * np.sin(2*alpha)
         cd = 1.5055 - 1.3509 * np.cos(2*alpha)
 
@@ -255,7 +252,6 @@ class FlatPlate:
         thetaDot = - u * np.sin(theta) + v * np.cos(theta)
         polar_state = np.array([rho, np.sin(theta), np.cos(theta), rhoDot, thetaDot])
         normalized_polar_state = self.normalize_polar_state(polar_state)
-        print('n_p_s ', ["{:0.4f}".format(x) for x in normalized_polar_state])
 
         return normalized_polar_state
 
@@ -347,7 +343,7 @@ class FlatPlate:
         plt.plot([self.xA, Bbest[0]], [self.yA, Bbest[1]], color='green', ls='--', label='Ideal path')
         plt.plot(xbest, ybest, color='green', label='best path ep='+str(best))
         plt.grid()
-        plt.axis('equal')
+        #plt.axis('equal')
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
         plt.legend(fontsize = 10, loc='best')
@@ -402,7 +398,6 @@ class FlatPlate:
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
-        #plt.legend(fontsize = 10, loc='best')
 
         plt.subplot(1,3,3)
         plt.plot(np.transpose(self.B_array[:len(returns)])[0], np.transpose(self.B_array[:len(returns)])[1], '.', color='blue')
