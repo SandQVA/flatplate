@@ -62,6 +62,7 @@ ALPHA_LR : 0.001
 #--------------------------------------------------------------------
 ############################ CFD config #############################
 #--------------------------------------------------------------------
+CFD_ITERATIONS : 5               # number of CFD iterations between two control iterations
 DELTA_TIME : 0.00002             # time step
 
 # initial position

@@ -68,20 +68,12 @@ class FlatPlate:
  
     def step(self,action):
         old_polar_state = self.state
-        self.pitch_rate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
-        self.pitch_angle = self.pitch_angle + self.pitch_rate * self.config["DELTA_TIME"]
-        #print('action', action)
-
-        # solve differential equation
-        timearray=np.linspace(0,self.config["DELTA_TIME"],2)
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        odestates = odeint(self.flatplate_equations,old_cartesian_state,timearray) # y = odeint(model, y0, t)
-        new_cartesian_state = odestates[-1] # choose second state returned by odeint
-        if new_cartesian_state[2] > 0:
-            print('u is positive')
-            self.done = True
+        self.pitch_rate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+
+        new_cartesian_state = self.cfd_iterations(old_cartesian_state, self.config["CFD_ITERATIONS"])
+       
         self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state)
-        #print('self.state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
  
         # compute reward and check if the episode is over (done)
         reward = self.compute_reward(old_polar_state, self.state)
@@ -96,6 +88,24 @@ class FlatPlate:
         self.var_episode = self.var_episode + [list(new_cartesian_state) + [action] + [reward]]
         
         return [self.state.copy(), reward, done, None]
+
+
+    def cfd_iterations(self, old_cartesian_state, nb_ite):
+        for i in range(nb_ite):
+            self.pitch_angle = self.pitch_angle + self.pitch_rate * self.config["DELTA_TIME"]
+
+            # solve differential equation
+            timearray=np.linspace(0,self.config["DELTA_TIME"],2)
+            odestates = odeint(self.flatplate_equations,old_cartesian_state,timearray) # y = odeint(model, y0, t)
+            new_cartesian_state = odestates[-1] # choose second state returned by odeint
+            if new_cartesian_state[2] > 0:
+                print('u is positive')
+                self.done = True
+                break
+            old_cartesian_state = new_cartesian_state
+            #print('old_cartesian_state', np.array2string(old_cartesian_state, formatter={'float_kind':lambda x: "%.5f" % x}))
+
+        return new_cartesian_state 
 
 
     def reset(self, Btype='random'):
@@ -168,11 +178,11 @@ class FlatPlate:
 
         dxdt = u
         dydt = v
-       
         dudt = ( drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle) ) / self.m
         dvdt = self.g + ( drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle) ) / self.m
  
         computedstate = np.array([dxdt, dydt, dudt, dvdt]).astype(float)
+
         return computedstate
 
 
