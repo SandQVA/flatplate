@@ -58,11 +58,13 @@ class FlatPlate:
         self.reward_range = None
         self.metadata = None
 
-        # dt_array and var_array initialisation (for plotting purposes only, not required by the application)    
-        self.var_episode = [0]
-        self.variables = ['x', 'y', 'u', 'v', 'actions', 'rewards']
-        self.dt_array = np.array([i*config["DELTA_TIME"] for i in range(config["MAX_STEPS"]+1)])
-        self.var_array = np.zeros([len(self.variables), config["MAX_EPISODES"],config["MAX_STEPS"]+1])
+        # dt_array and var_array initialisation (for postproc and plotting purposes only, not required by the application)    
+        self.cfd_var_episode = []
+        self.cfd_var_names = ['x', 'y', 'u', 'v', 'pitch']
+        self.cfd_var_array = np.zeros([len(self.cfd_var_names), config["MAX_EPISODES"], config["MAX_STEPS"]*config["CFD_ITERATIONS"]+1])
+        self.rl_var_episode = []
+        self.rl_var_names = ['rho', 'sintheta', 'costheta', 'rhodot', 'thetadot', 'action', 'reward']
+        self.rl_var_array = np.zeros([len(self.rl_var_names), config["MAX_EPISODES"], config["MAX_STEPS"]])
 
  
     def step(self,action):
@@ -85,7 +87,7 @@ class FlatPlate:
         done = self.done
 
         # save data for printing
-        self.var_episode = self.var_episode + [list(new_cartesian_state) + [action] + [reward]]
+        self.rl_var_episode = self.rl_var_episode + [list(self.state) + [action] + [reward]]
         
         return [self.state.copy(), reward, done, None]
 
@@ -104,12 +106,15 @@ class FlatPlate:
                 break
             old_cartesian_state = new_cartesian_state
 
+            # save data for printing
+            self.cfd_var_episode = self.cfd_var_episode + [list(new_cartesian_state) + [self.pitch]]
+
         return new_cartesian_state 
 
 
     def reset(self, Btype='random'):
         self.nb_ep +=1
-        self.var_episode = []
+        self.rl_var_episode = []
         self.done = False
         self.pitch = 0.
 
@@ -137,8 +142,9 @@ class FlatPlate:
         # define initial state according to the position of B
         self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init)
         # fill array with initial state
-        for i in range(len(self.cartesian_init)):
-            self.var_array[i,:,0] = self.cartesian_init[i]
+        self.cfd_var_episode = [list(self.cartesian_init) + [self.pitch]]
+        #for i in range(len(self.cartesian_init)):
+        #    self.cfd_var_array[i,:,0] = self.cartesian_init[i]
         
         return self.state.copy()
 
@@ -308,32 +314,37 @@ class FlatPlate:
 
 
     def fill_array_tobesaved(self):
-        for i in range(len(self.variables)):
-            for k in range(len(self.var_episode)):
-                self.var_array[i, self.nb_ep-1, k+1] = self.var_episode[k][i]
+        for i in range(len(self.cfd_var_names)):
+            for k in range(len(self.cfd_var_episode)):
+                self.cfd_var_array[i, self.nb_ep-1, k] = self.cfd_var_episode[k][i]
+
+        for i in range(len(self.rl_var_names)):
+            for k in range(len(self.rl_var_episode)):
+                self.rl_var_array[i, self.nb_ep-1, k] = self.rl_var_episode[k][i]
 
 
     def print_array_in_files(self, folder):
-        for i, var in enumerate(self.variables):
+        for i, var in enumerate(self.cfd_var_names):
             filename = folder+'/'+var+'.csv'
-            np.savetxt(filename, self.var_array[i,:,:], delimiter=";")
+            np.savetxt(filename, self.cfd_var_array[i,:,:], delimiter=";")
+
+        for i, var in enumerate(self.rl_var_names):
+            filename = folder+'/'+var+'.csv'
+            np.savetxt(filename, self.rl_var_array[i,:,:], delimiter=";")
 
         filename = folder+'/Bcoordinates.csv'
         np.savetxt(filename, self.B_array, delimiter=";")
 
-        filename = folder+'/time.csv'
-        np.savetxt(filename, self.dt_array, delimiter=";")
-
 
     def plot_training_output(self, returns, eval_returns, freq_eval, folder):
-        xlast = np.trim_zeros(self.var_array[0,-1,:], 'b')
-        ylast = self.var_array[1,-1,:len(xlast)] 
+        xlast = np.trim_zeros(self.cfd_var_array[0,-1,:], 'b')
+        ylast = self.cfd_var_array[1,-1,:len(xlast)] 
 
-        cumulative_reward = self.var_array[5,:,:].sum(axis=1)
+        cumulative_reward = self.rl_var_array[6,:,:].sum(axis=1)
 
         best = np.argmax(cumulative_reward)
-        xbest = np.trim_zeros(self.var_array[0,best,:], 'b')
-        ybest = self.var_array[1,best,:len(xbest)]
+        xbest = np.trim_zeros(self.cfd_var_array[0,best,:], 'b')
+        ybest = self.cfd_var_array[1,best,:len(xbest)]
         if len(self.B_array) == 1:
             Bbest = self.B_array[0]
         else: 
@@ -375,8 +386,8 @@ class FlatPlate:
 
     def plot_testing_output(self, returns, folder):
         score = sum(returns)/len(returns) if returns else 0
-        xlast = np.trim_zeros(self.var_array[0,0,:], 'b')
-        ylast = self.var_array[1,0,:len(xlast)]
+        xlast = np.trim_zeros(self.cfd_var_array[0,0,:], 'b')
+        ylast = self.cfd_var_array[1,0,:len(xlast)]
 
         plt.cla()
         plt.figure(figsize=(10, 5))
@@ -401,8 +412,8 @@ class FlatPlate:
                 plt.plot([self.xA,self.B_array[i][0]], [self.yA,self.B_array[i][1]], color=cmap[i], ls='--', label='Ideal path')
         
         for i in range(len(returns)):
-            x = np.trim_zeros(self.var_array[0,i,:], 'b')
-            y = self.var_array[1,i,:len(x)]
+            x = np.trim_zeros(self.cfd_var_array[0,i,:], 'b')
+            y = self.cfd_var_array[1,i,:len(x)]
             plt.plot(x,y, color=cmap[i], label='test path')
         plt.grid()
         plt.xlabel('x (m)', fontsize=14)
