@@ -34,17 +34,16 @@ class FlatPlate:
         self.nb_ep = 0
         self.B_array = []
         self.done = False
-        self.pitch_angle = 0.
-        self.pitch_rate = 0.
-        self.max_pitch_rate = config["MAX_PITCH_RATE"]
+        self.pitch = 0.
+        self.pitchrate = 0.
+        self.max_pitchrate = config["MAX_PITCHRATE"]
         self.c = config["CHORD"]                              # flat plate chord
         self.L = config["LENGTH"]                             # flat plate length
         self.t = config["THICKNESS"]                          # flat plate thickness
         self.S = self.c * self.L                              # flat plate surface
         self.rho_air = 1.0
-        #self.rho_plate = self.rho_air * 200                   # flat plate density (paper of 500g/m^2 density)
-        #self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
-        self.m = 4.86745e-7
+        self.rho_plate = 30 * self.rho_air                   # flat plate density (paper of 500g/m^2 density)
+        self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                       # gravity
         
@@ -53,7 +52,7 @@ class FlatPlate:
         self.state = np.zeros(5)
 
         # attributs needed by the rl code or gym wrappers
-        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitch_rate, self.max_pitch_rate, (1,))
+        self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitchrate, self.max_pitchrate, (1,))
         self.action_size = 1
         self.observation_space = collections.namedtuple('observation_space', ['shape'])(self.state.shape)
         self.reward_range = None
@@ -69,11 +68,12 @@ class FlatPlate:
     def step(self,action):
         old_polar_state = self.state
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        self.pitch_rate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+        self.pitchrate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
 
         new_cartesian_state = self.cfd_iterations(old_cartesian_state, self.config["CFD_ITERATIONS"])
        
         self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state)
+        #print('state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
  
         # compute reward and check if the episode is over (done)
         reward = self.compute_reward(old_polar_state, self.state)
@@ -92,7 +92,7 @@ class FlatPlate:
 
     def cfd_iterations(self, old_cartesian_state, nb_ite):
         for i in range(nb_ite):
-            self.pitch_angle = self.pitch_angle + self.pitch_rate * self.config["DELTA_TIME"]
+            self.pitch = self.pitch + self.pitchrate * self.config["DELTA_TIME"]
 
             # solve differential equation
             timearray=np.linspace(0,self.config["DELTA_TIME"],2)
@@ -103,7 +103,6 @@ class FlatPlate:
                 self.done = True
                 break
             old_cartesian_state = new_cartesian_state
-            #print('old_cartesian_state', np.array2string(old_cartesian_state, formatter={'float_kind':lambda x: "%.5f" % x}))
 
         return new_cartesian_state 
 
@@ -112,7 +111,7 @@ class FlatPlate:
         self.nb_ep +=1
         self.var_episode = []
         self.done = False
-        self.pitch_angle = 0.
+        self.pitch = 0.
 
         # B is fixed, values are given in the config file 
         if Btype=='fixed':
@@ -166,7 +165,7 @@ class FlatPlate:
         V_norm = np.sqrt(u**2+v**2)
 
         flight_path_angle = np.arctan2(-v, -u)
-        alpha = - self.pitch_angle + flight_path_angle
+        alpha = - self.pitch + flight_path_angle
         if alpha > np.pi/2:
             print('the angle of attack is bigger than pi/2, the application has not been designed to be physically accurate in such cases')
 
@@ -292,7 +291,7 @@ class FlatPlate:
         normalized_state[1] = state[1]
         normalized_state[2] = state[2]
         normalized_state[3] = state[3]/np.sqrt(self.uA**2+self.vA**2)
-        normalized_state[4] = state[4]/10
+        normalized_state[4] = state[4]/(self.max_pitchrate/100)
 
         return normalized_state
 
@@ -303,7 +302,7 @@ class FlatPlate:
         denormalized_state[1] = state[1]
         denormalized_state[2] = state[2]
         denormalized_state[3] = state[3]*np.sqrt(self.uA**2+self.vA**2)
-        denormalized_state[4] = state[4]*10
+        denormalized_state[4] = state[4]*(self.max_pitchrate/100)
 
         return denormalized_state
 

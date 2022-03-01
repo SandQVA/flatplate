@@ -7,15 +7,15 @@
 GAME : "flatplate"
 
 MEMORY_CAPACITY : 500000        # for the Replay Memory
-BATCH_SIZE : 256
+BATCH_SIZE : 64
 GAMMA : 0.99                    # discount factor
 TAU : 0.005                     # update parameter of the target network
 
 ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
 MAX_EPISODES : 500               # number of training episodes
-MAX_STEPS : 300                 # max steps per episode
-PRE_FILL_EPISODES : 2          # number of pre-filling episodes
+MAX_STEPS : 150                 # max steps per episode
+PRE_FILL_EPISODES : 8          # number of pre-filling episodes
 
 # saving and plotting parameters
 FREQ_PLOT : 10
@@ -62,7 +62,7 @@ ALPHA_LR : 0.001
 #--------------------------------------------------------------------
 ############################ CFD config #############################
 #--------------------------------------------------------------------
-CFD_ITERATIONS : 5               # number of CFD iterations between two control iterations
+CFD_ITERATIONS : 1               # number of CFD iterations between two control iterations
 DELTA_TIME : 0.00002             # time step
 
 # initial position
@@ -79,7 +79,7 @@ XB : -0.02
 YB : 0.002
 
 # some parameters for the control problem
-MAX_PITCH_RATE : 800
+MAX_PITCHRATE : 870
 REWARD_TYPE : "dense" #choose between dense and sparse
 
 # flat plate dimensions
