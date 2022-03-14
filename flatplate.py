@@ -37,15 +37,15 @@ class FlatPlate:
         self.pitch = 0.
         self.pitchrate = 0.
         self.max_pitchrate = config["MAX_PITCHRATE"]
-        self.c = config["CHORD"]                              # flat plate chord
-        self.L = config["LENGTH"]                             # flat plate length
-        self.t = config["THICKNESS"]                          # flat plate thickness
-        self.S = self.c * self.L                              # flat plate surface
+        self.c = config["CHORD"]                                  # flat plate chord
+        self.L = config["LENGTH"]                                 # flat plate length
+        self.t = config["THICKNESS"]                              # flat plate thickness
+        self.S = self.c * self.L                                  # flat plate surface
         self.rho_air = 1.0
-        self.rho_plate = 30 * self.rho_air                   # flat plate density (paper of 500g/m^2 density)
-        self.m = self.rho_plate * self.L * self.c * self.t    # flate plate mass
+        self.rho_plate = config["DENSITY_RATIO"] * self.rho_air   # flat plate density
+        self.m = self.rho_plate * self.L * self.c * self.t        # flate plate mass
         self.mr = 0.5 * self.rho_air * self.S
-        self.g = -9.806                                       # gravity
+        self.g = -9.806                                           # gravity
         
         # state initialisation
         self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])
@@ -143,8 +143,6 @@ class FlatPlate:
         self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init)
         # fill array with initial state
         self.cfd_var_episode = [list(self.cartesian_init) + [self.pitch]]
-        #for i in range(len(self.cartesian_init)):
-        #    self.cfd_var_array[i,:,0] = self.cartesian_init[i]
         
         return self.state.copy()
 
@@ -204,14 +202,8 @@ class FlatPlate:
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if self.config["REWARD_TYPE"] == 'dense':
-            if won: reward += 10
-            elif lost: reward += -10
-        elif self.config["REWARD_TYPE"] == 'sparse':
-            if won: reward += 100
-            elif lost: reward += -100
-        else:
-            print('!!! please define reward !!!')
+        if won: reward += 10
+        elif lost: reward += -10
 
         return reward
 
@@ -416,6 +408,7 @@ class FlatPlate:
             y = self.cfd_var_array[1,i,:len(x)]
             plt.plot(x,y, color=cmap[i], label='test path')
         plt.grid()
+        plt.axis('equal')
         plt.xlabel('x (m)', fontsize=14)
         plt.ylabel('y (m)', fontsize=14)
 

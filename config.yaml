@@ -13,13 +13,13 @@ TAU : 0.005                     # update parameter of the target network
 
 ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
 
-MAX_EPISODES : 500               # number of training episodes
+MAX_EPISODES : 1000               # number of training episodes
 MAX_STEPS : 150                 # max steps per episode
 PRE_FILL_EPISODES : 8          # number of pre-filling episodes
 
 # saving and plotting parameters
-FREQ_PLOT : 10
-FREQ_EVAL : 10
+FREQ_PLOT : 100
+FREQ_EVAL : 1
 FREQ_SAVE : 100
 
 
@@ -79,7 +79,8 @@ XB : -0.02
 YB : 0.002
 
 # some parameters for the control problem
-MAX_PITCHRATE : 870
+DENSITY_RATIO : 300.
+MAX_PITCHRATE : 500.
 REWARD_TYPE : "dense" #choose between dense and sparse
 
 # flat plate dimensions
