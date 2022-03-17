@@ -46,7 +46,7 @@ class FlatPlate:
         self.m = self.rho_plate * self.L * self.c * self.t        # flate plate mass
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                           # gravity
-        
+
         # state initialisation
         self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])
         self.state = np.zeros(5)
@@ -66,11 +66,11 @@ class FlatPlate:
         self.rl_var_names = ['rho', 'sintheta', 'costheta', 'rhodot', 'thetadot', 'action', 'reward']
         self.rl_var_array = np.zeros([len(self.rl_var_names), config["MAX_EPISODES"], config["MAX_STEPS"]])
 
- 
+
     def step(self,action):
         old_polar_state = self.state
         old_cartesian_state = self.get_state_in_absolute_cartesian_coordinates(old_polar_state)
-        self.pitchrate = action + np.random.normal(scale=self.config["ACTION_SIGMA"])
+        self.pitchrate = action + np.random.normal(scale=self.max_pitchrate*self.config["ACTION_SIGMA"])
 
         new_cartesian_state = self.cfd_iterations(old_cartesian_state, self.config["CFD_ITERATIONS"])
        
