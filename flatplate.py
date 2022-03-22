@@ -49,7 +49,7 @@ class FlatPlate:
 
         # state initialisation
         self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])
-        self.state = np.zeros(5)
+        self.state = np.zeros(6)
 
         # attributs needed by the rl code or gym wrappers
         self.action_space = collections.namedtuple('action_space', ['low', 'high', 'shape'])(-self.max_pitchrate, self.max_pitchrate, (1,))
@@ -60,10 +60,10 @@ class FlatPlate:
 
         # dt_array and var_array initialisation (for postproc and plotting purposes only, not required by the application)    
         self.cfd_var_episode = []
-        self.cfd_var_names = ['x', 'y', 'u', 'v', 'pitch']
+        self.cfd_var_names = ['x', 'y', 'u', 'v', 'pitch_cfd']
         self.cfd_var_array = np.zeros([len(self.cfd_var_names), config["MAX_EPISODES"], config["MAX_STEPS"]*config["CFD_ITERATIONS"]+1])
         self.rl_var_episode = []
-        self.rl_var_names = ['rho', 'sintheta', 'costheta', 'rhodot', 'thetadot', 'action', 'reward']
+        self.rl_var_names = ['rho', 'sintheta', 'costheta', 'rhodot', 'thetadot', 'pitch', 'action', 'reward']
         self.rl_var_array = np.zeros([len(self.rl_var_names), config["MAX_EPISODES"], config["MAX_STEPS"]])
 
 
@@ -74,7 +74,7 @@ class FlatPlate:
 
         new_cartesian_state = self.cfd_iterations(old_cartesian_state, self.config["CFD_ITERATIONS"])
        
-        self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state)
+        self.state = self.get_state_in_normalized_polar_coordinates(new_cartesian_state, self.pitch)
         #print('state', np.array2string(self.state, formatter={'float_kind':lambda x: "%.5f" % x}))
  
         # compute reward and check if the episode is over (done)
@@ -140,7 +140,7 @@ class FlatPlate:
             quit()
 
         # define initial state according to the position of B
-        self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init)
+        self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init, self.pitch)
         # fill array with initial state
         self.cfd_var_episode = [list(self.cartesian_init) + [self.pitch]]
         
@@ -247,7 +247,7 @@ class FlatPlate:
 
 # Below are only utility functions ------------------------------------------
 
-    def get_state_in_normalized_polar_coordinates(self, cartesian_state):
+    def get_state_in_normalized_polar_coordinates(self, cartesian_state, pitch):
         BP = cartesian_state[0:2]-self.B
         rho = np.linalg.norm(BP)
         theta = np.arctan2(BP[1],BP[0])
@@ -257,7 +257,7 @@ class FlatPlate:
 
         rhoDot = u * np.cos(theta) + v * np.sin(theta)
         thetaDot = - u * np.sin(theta) + v * np.cos(theta)
-        polar_state = np.array([rho, np.sin(theta), np.cos(theta), rhoDot, thetaDot])
+        polar_state = np.array([rho, np.sin(theta), np.cos(theta), rhoDot, thetaDot, pitch])
         normalized_polar_state = self.normalize_polar_state(polar_state)
 
         return normalized_polar_state
@@ -284,23 +284,25 @@ class FlatPlate:
 
 
     def normalize_polar_state(self, state):
-        normalized_state = np.zeros(5)
+        normalized_state = np.zeros(6)
         normalized_state[0] = state[0]/self.rhoAB
         normalized_state[1] = state[1]
         normalized_state[2] = state[2]
         normalized_state[3] = state[3]/np.sqrt(self.uA**2+self.vA**2)
         normalized_state[4] = state[4]/(self.max_pitchrate/100)
+        normalized_state[5] = state[5]
 
         return normalized_state
 
 
     def denormalize_polar_state(self, state):
-        denormalized_state = np.zeros(5)
+        denormalized_state = np.zeros(6)
         denormalized_state[0] = state[0]*self.rhoAB
         denormalized_state[1] = state[1]
         denormalized_state[2] = state[2]
         denormalized_state[3] = state[3]*np.sqrt(self.uA**2+self.vA**2)
         denormalized_state[4] = state[4]*(self.max_pitchrate/100)
+        denormalized_state[5] = state[5]
 
         return denormalized_state
 
@@ -332,7 +334,7 @@ class FlatPlate:
         xlast = np.trim_zeros(self.cfd_var_array[0,-1,:], 'b')
         ylast = self.cfd_var_array[1,-1,:len(xlast)] 
 
-        cumulative_reward = self.rl_var_array[6,:,:].sum(axis=1)
+        cumulative_reward = self.rl_var_array[7,:,:].sum(axis=1)
 
         best = np.argmax(cumulative_reward)
         xbest = np.trim_zeros(self.cfd_var_array[0,best,:], 'b')
