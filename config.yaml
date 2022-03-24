@@ -79,7 +79,7 @@ XB : -0.02
 YB : 0.002
 
 # some parameters for the control problem
-DENSITY_RATIO : 300.
+DENSITY_RATIO : 30.
 MAX_PITCHRATE : 500.
 REWARD_TYPE : "dense" #choose between dense and sparse
 
