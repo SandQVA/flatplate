@@ -25,14 +25,30 @@ class FlatPlate:
         self.yA = 0.
         self.uA = config["UA"]
         self.vA = config["VA"]
-        self.xB = 0.
-        self.yB = 0. 
-        self.B = np.array([self.xB,self.yB])
-        self.rhoAB = 0.
+
+        self.B_array = []
+        Btype=config['BTYPE']
+        # B is fixed, values are given in the config file 
+        if Btype=='fixed':
+            self.xB = self.config["XB"]
+            self.yB = self.config["YB"]
+            self.B = np.array([self.xB,self.yB])
+            self.B_array.append(self.B)
+            A = np.array([self.xA,self.yA])
+            self.rhoAB = np.linalg.norm(A-self.B)
+            self.rho0 = self.rhoAB
+        # B is set randomly (in a given range) at each episode
+        elif Btype=='random': 
+            self.xB = 0.
+            self.yB = 0. 
+            self.B = np.array([self.xB,self.yB])
+            self.rhoAB = 0.
+            self.rho0 = self.config["DISTANCE_RANGE"][1]
+        else: print('Btype not correctly defined')
+        print('rho0 = ', self.rho0)
 
         # some parameters
         self.nb_ep = 0
-        self.B_array = []
         self.done = False
         self.pitch = 0.
         self.pitchrate = 0.
@@ -46,6 +62,7 @@ class FlatPlate:
         self.m = self.rho_plate * self.L * self.c * self.t        # flate plate mass
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                           # gravity
+
 
         # state initialisation
         self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])
@@ -120,13 +137,7 @@ class FlatPlate:
 
         # B is fixed, values are given in the config file 
         if Btype=='fixed':
-            if self.nb_ep==1:
-                self.xB = self.config["XB"]
-                self.yB = self.config["YB"]
-                self.B = np.array([self.xB,self.yB])
-                self.B_array.append(self.B)
-                A = np.array([self.xA,self.yA])
-                self.rhoAB = np.linalg.norm(A-self.B)
+            pass # values defined in the class init
 
         # B is set randomly (in a given range) at each episode
         elif Btype=='random':
@@ -285,7 +296,7 @@ class FlatPlate:
 
     def normalize_polar_state(self, state):
         normalized_state = np.zeros(6)
-        normalized_state[0] = state[0]/self.rhoAB
+        normalized_state[0] = state[0]/self.rho0
         normalized_state[1] = state[1]
         normalized_state[2] = state[2]
         normalized_state[3] = state[3]/np.sqrt(self.uA**2+self.vA**2)
@@ -297,7 +308,7 @@ class FlatPlate:
 
     def denormalize_polar_state(self, state):
         denormalized_state = np.zeros(6)
-        denormalized_state[0] = state[0]*self.rhoAB
+        denormalized_state[0] = state[0]*self.rho0
         denormalized_state[1] = state[1]
         denormalized_state[2] = state[2]
         denormalized_state[3] = state[3]*np.sqrt(self.uA**2+self.vA**2)
