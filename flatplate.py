@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 12 17:17:59 2019 by Andrea
-Last modified jun 7 2020 by Sandrine
-"""
 
 import numpy as np
 from scipy.integrate import odeint
@@ -13,9 +9,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.pylab as pl
 
-
 class FlatPlate:
-    
+
     def __init__(self,config):
         
         self.config = config
@@ -62,7 +57,6 @@ class FlatPlate:
         self.m = self.rho_plate * self.L * self.c * self.t        # flate plate mass
         self.mr = 0.5 * self.rho_air * self.S
         self.g = -9.806                                           # gravity
-
 
         # state initialisation
         self.cartesian_init = np.array([self.xA, self.yA, self.uA, self.vA])

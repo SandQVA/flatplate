@@ -11,11 +11,11 @@ BATCH_SIZE : 64
 GAMMA : 0.99                    # discount factor
 TAU : 0.005                     # update parameter of the target network
 
-ACTION_SIGMA : 0.0              # additional noise (between chosen and actual action)
+ACTION_SIGMA : 0.0              # environment noise ([0 --> 0; 1 --> max_pitch])
 
-MAX_EPISODES : 1000               # number of training episodes
+MAX_EPISODES : 1000             # number of training episodes
 MAX_STEPS : 150                 # max steps per episode
-PRE_FILL_EPISODES : 8          # number of pre-filling episodes
+PRE_FILL_EPISODES : 8           # number of pre-filling episodes
 
 # saving and plotting parameters
 FREQ_PLOT : 100
@@ -81,7 +81,7 @@ YB : 0.002
 # some parameters for the control problem
 DENSITY_RATIO : 30.
 MAX_PITCHRATE : 500.
-REWARD_TYPE : "dense" #choose between dense and sparse
+REWARD_TYPE : "dense"           #choose between dense and sparse
 
 # flat plate dimensions
 CHORD : 0.01                                          # flat plate chord
