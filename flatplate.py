@@ -30,17 +30,14 @@ class FlatPlate:
             self.B = np.array([self.xB,self.yB])
             self.B_array.append(self.B)
             A = np.array([self.xA,self.yA])
-            self.rhoAB = np.linalg.norm(A-self.B)
-            self.rho0 = self.rhoAB
+            self.rho0 = np.linalg.norm(A-self.B)
         # B is set randomly (in a given range) at each episode
         elif Btype=='random': 
             self.xB = 0.
             self.yB = 0. 
             self.B = np.array([self.xB,self.yB])
-            self.rhoAB = 0.
             self.rho0 = self.config["DISTANCE_RANGE"][1]
         else: print('Btype not correctly defined')
-        print('rho0 = ', self.rho0)
 
         # some parameters
         self.nb_ep = 0
@@ -244,10 +241,10 @@ class FlatPlate:
         env_angle_range = np.array(self.config["ANGLE_RANGE"])/180*np.pi
         env_distance_range = np.array(self.config["DISTANCE_RANGE"])
         thetaA = -np.random.uniform(env_angle_range[0], env_angle_range[1])
-        self.rhoAB = np.random.uniform(env_distance_range[0], env_distance_range[1])
+        rhoAB = np.random.uniform(env_distance_range[0], env_distance_range[1])
 
-        self.xB = self.rhoAB * np.cos(np.pi+thetaA)
-        self.yB = self.rhoAB * np.sin(np.pi+thetaA)
+        self.xB = rhoAB * np.cos(np.pi+thetaA)
+        self.yB = rhoAB * np.sin(np.pi+thetaA)
 
 
 # Below are only utility functions ------------------------------------------
