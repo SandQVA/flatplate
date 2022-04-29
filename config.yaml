@@ -72,11 +72,13 @@ UA : -10.0
 VA : 0.0
 
 # target position definition
-BTYPE : "fixed"
+BTYPE : "random"
 DISTANCE_RANGE : [0.01, 0.02]
-ANGLE_RANGE : [-15., 15.]
+ANGLE_RANGE : [-5., 5.]
 XB : -0.02
 YB : 0.002
+BTYPE_EVAL : "batch"
+B_BATCH : [[-0.015, 0], [-0.015, 0.0013], [-0.015, -0.0013]]
 
 # some parameters for the control problem
 DENSITY_RATIO : 30.

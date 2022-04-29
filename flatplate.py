@@ -38,6 +38,7 @@ class FlatPlate:
             self.B = np.array([self.xB,self.yB])
             self.rho0 = self.config["DISTANCE_RANGE"][1]
         else: print('Btype not correctly defined')
+        self.B_batch = config["B_BATCH"]
 
         # some parameters
         self.nb_ep = 0
@@ -138,8 +139,14 @@ class FlatPlate:
 
         # a fixed set of B positions is used
         elif Btype=='batch':
-            print('not yet coded')
-            quit()
+            self.xB = self.B_batch[(self.nb_ep-1) % len(self.B_batch)][0]
+            self.yB = self.B_batch[(self.nb_ep-1)% len(self.B_batch)][1]
+            self.B = np.array([self.xB,self.yB])
+            self.B_array.append(self.B)
+            #print('B coordinates = ', self.B)
+
+        else:
+            print('B not correctly defined')
 
         # define initial state according to the position of B
         self.state = self.get_state_in_normalized_polar_coordinates(self.cartesian_init, self.pitch)
@@ -375,6 +382,8 @@ class FlatPlate:
 
         plt.subplot(1,3,3)
         plt.plot(np.transpose(self.B_array)[0], np.transpose(self.B_array)[1], '.', color='blue')
+        if self.config["BTYPE_EVAL"] == "batch":
+            plt.plot(np.transpose(self.B_batch)[0], np.transpose(self.B_batch)[1], '.', color='red')
         plt.scatter(self.xA, self.yA, 150, color='black', zorder=1.0)
         plt.gca().set_aspect('equal', adjustable='box')
         plt.savefig(f'{folder}/train_output.png')
