@@ -426,7 +426,7 @@ class FlatPlate:
         plt.ylabel('y (m)', fontsize=14)
 
         plt.subplot(1,3,3)
-        plt.plot(np.transpose(self.B_array[:len(returns)])[0], np.transpose(self.B_array[:len(returns)])[1], '.', color='blue')
+        plt.plot(np.transpose(self.B_array[:len(returns)])[0], np.transpose(self.B_array[:len(returns)])[1], '.', color='red')
         plt.scatter(self.xA, self.yA, 150, color='black', zorder=1.0)
         plt.gca().set_aspect('equal', adjustable='box')
 
