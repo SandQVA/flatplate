@@ -20,7 +20,7 @@ PRE_FILL_EPISODES : 8           # number of pre-filling episodes
 # saving and plotting parameters
 FREQ_PLOT : 100
 FREQ_EVAL : 1
-FREQ_SAVE : 100
+FREQ_SAVE : "best"
 
 
 #----- parameters common to DDPG, TD3 and SAC for LaBER and PER -----
