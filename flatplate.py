@@ -37,6 +37,11 @@ class FlatPlate:
             self.yB = 0. 
             self.B = np.array([self.xB,self.yB])
             self.rho0 = self.config["DISTANCE_RANGE"][1]
+            if config['BTYPE_EVAL']=='fixed':
+                self.xB = self.config["XB"]
+                self.yB = self.config["YB"]
+                self.B = np.array([self.xB,self.yB])
+                self.B_array.append(self.B)
         else: print('Btype not correctly defined')
         self.B_batch = config["B_BATCH"]
 
@@ -239,6 +244,7 @@ class FlatPlate:
         elif polar_state[2] <= 0.:
             lost = True
             print('lost')
+        else: print('max steps reached')
 
         return won, lost
 
