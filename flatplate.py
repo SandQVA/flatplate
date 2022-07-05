@@ -183,8 +183,8 @@ class FlatPlate:
 
         dxdt = u
         dydt = v
-        dudt = ( drag * np.cos(-flight_path_angle) - lift * np.sin(-flight_path_angle) ) / self.m
-        dvdt = self.g + ( drag * np.sin(-flight_path_angle) + lift * np.cos(-flight_path_angle) ) / self.m
+        dudt = ( drag * np.cos(flight_path_angle) - lift * np.sin(flight_path_angle) ) / self.m
+        dvdt = self.g + ( drag * np.sin(flight_path_angle) + lift * np.cos(flight_path_angle) ) / self.m
  
         computedstate = np.array([dxdt, dydt, dudt, dvdt]).astype(float)
 
@@ -204,8 +204,8 @@ class FlatPlate:
 
 
     def update_reward_if_done(self, reward, won, lost):
-        if won: reward += 10
-        elif lost: reward += -10
+        if won: reward += 10.0
+        elif lost: reward += -10.0
 
         return reward
 
@@ -232,6 +232,7 @@ class FlatPlate:
         elif polar_state[2] <= 0.:
             lost = True
             print('lost')
+        else: print('lost')
 
         return won, lost
 
